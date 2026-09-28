@@ -13,7 +13,8 @@ const AddProductImages = () => {
 
       <div className="max-w-5xl mx-auto">
 
-       
+       830 588 173
+       zvcuqf3z
 
 
         {/*  PRODUCT IMAGES */}
