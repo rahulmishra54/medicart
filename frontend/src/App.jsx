@@ -9,10 +9,11 @@ import Comp from "./component/Comp.jsx"
 import PharmistNavBar from './component/PharmistNavBar.jsx'
 import AddProductImage from "./component/AddProductImage.jsx"
 import PrescriptionDetails from "./component/PrescriptionDetails.jsx"
+import InventoryTable from "./component/InventoryTable.jsx"
 function App() {
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <PrescriptionDetails/>
+      <PrescriptionDetails />
     
       
     </div>
