@@ -1,0 +1,19 @@
+import express from "express"
+import authRoutes from "./routes/auth.routes.js";
+import cartRoutes from "./routes/cart.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
+import medicineRoutes from "./routes/medicine.routes.js";
+import orderRoutes from "./routes/order.routes.js";
+import prescriptionRoutes from "./routes/prescription.routes.js";
+
+
+const app = express();
+
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/cart", cartRoutes);
+app.use("/api/v1/categories", categoryRoutes);
+app.use("/api/v1/medicines", medicineRoutes);
+app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/prescriptions", prescriptionRoutes);
+
+export default app;
