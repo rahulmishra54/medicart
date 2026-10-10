@@ -1,4 +1,6 @@
 import { Pencil } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const InventoryRow = ({ product, index, onUpdate }) => {
   const getStatus = () => {
@@ -76,13 +78,24 @@ const InventoryRow = ({ product, index, onUpdate }) => {
         </div>
 
         <div className="col-span-1">
-          <button
-            onClick={() => onUpdate(product)}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-100"
-          >
-            <Pencil size={14} />
-            Update
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onUpdate(product)}
+              aria-label={`Update stock for ${product.name}`}
+              title="Update stock"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+            >
+              <Pencil size={14} />
+            </button>
+            <Link
+              to={`/pharmacist/products/${product.id}/edit`}
+              aria-label={`Edit ${product.name}`}
+              title="Edit medicine"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E5F6F0] text-[#117F5E] hover:bg-[#D5F0E6]"
+            >
+              <ExternalLink size={14} />
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -146,13 +159,22 @@ const InventoryRow = ({ product, index, onUpdate }) => {
 
         </div>
 
-        <button
-          onClick={() => onUpdate(product)}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-50 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-100"
-        >
-          <Pencil size={16} />
-          Update Stock
-        </button>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => onUpdate(product)}
+            className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-100"
+          >
+            <Pencil size={16} />
+            Update Stock
+          </button>
+          <Link
+            to={`/pharmacist/products/${product.id}/edit`}
+            className="flex items-center justify-center gap-2 rounded-lg bg-[#E5F6F0] py-2.5 text-sm font-medium text-[#117F5E] hover:bg-[#D5F0E6]"
+          >
+            <ExternalLink size={16} />
+            Edit Medicine
+          </Link>
+        </div>
 
       </div>
     </>

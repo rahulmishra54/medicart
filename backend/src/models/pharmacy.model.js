@@ -32,12 +32,25 @@ const pharmacySchema = new mongoose.Schema(
       unique: true,
     },
 
+    password:{
+      required: true,
+      type: String,
+      
+
+    },
     status: {
       type: String,
       required: true,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
+
+    image:{
+      type:String,
+      
+
+    },
+    
   },
   {
     timestamps: true,

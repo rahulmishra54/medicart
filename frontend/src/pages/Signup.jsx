@@ -13,40 +13,63 @@ import {
 } from "lucide-react";
 
 import logo from "../assets/logo.png";
+import {useState} from "react";
 import {useNavigate} from "react-router-dom";
+import api from "../api/api.js";
 const Signup = () => {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    name:"",
+    email:"",
+    password:"",
+    confirmPassword:"",
+   
+  })
+ 
+  
+  const handleSignup = async(e)=>{
+    e.preventDefault();
+    try{
+      const response = await api.post("/auth/register",formData);
+      console.log(response)
+      if(response.data.success){
+        console.log("User registered successfully")
+      }
+    }
+    catch(error){
+      
+      console.log("Error registering user:",error.response.data.message);
+    }
+  }
+
   return (
     <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-[#F4FBFC] via-white to-[#ECF9F6]">
 
-      <div className="grid h-full w-full lg:grid-cols-[45%_55%]">
+      <div className="grid h-screen w-full lg:grid-cols-[45%_55%]">
 
-        {/* =====================================================
+        {/* 
             LEFT SIDE
-        ====================================================== */}
-        <div className="hidden lg:flex h-full min-h-0 items-center px-10 lg:px-14 xl:px-16">
+       */}
+        <div className="hidden h-full min-h-0 overflow-hidden px-10 lg:flex lg:items-center lg:justify-center lg:px-14 xl:px-16">
 
           <div className="w-full max-w-[620px]">
 
             {/* Logo */}
-            <div className="mb-8">
+              <div className="mb-6">
 
               <img
                 src={logo}
                 alt="MediCart"
-                className="w-[260px] h-auto object-contain object-left"
+                className="w-44 xl:w-52 h-auto object-contain object-left"
               />
 
             </div>
 
 
             {/* Heading */}
-            <h2 className="text-6xl font-extrabold leading-[0.98] tracking-tight text-[#0B3154] xl:text-7xl">
+            <h2 className="text-4xl font-extrabold leading-tight tracking-tight text-[#0B3154] xl:text-5xl">
 
-              Your
-              <br />
-
-              Health,
+              Your Health,
               <br />
 
               Our{" "}
@@ -59,27 +82,23 @@ const Signup = () => {
 
 
             {/* Description */}
-            <p className="mt-6 max-w-[570px] text-lg leading-7 text-[#667B98]">
+            <p className="mt-4 max-w-lg text-base leading-7 text-[#667B98] xl:text-lg">
 
-              Genuine medicines, trusted pharmacies and expert support —
-
-              <br />
-
-              delivered to your doorstep.
+              Genuine medicines, trusted pharmacies and expert support — delivered to your doorstep.
 
             </p>
 
 
             {/* Features */}
-            <div className="mt-9 grid max-w-[610px] grid-cols-2 gap-x-8 gap-y-6">
+            <div className="mt-6 grid max-w-[610px] grid-cols-2 gap-3">
 
               {/* 1 */}
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 items-center gap-3 rounded-xl border border-[#DDEBEF] bg-white/70 p-3">
 
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
 
                   <ShieldCheck
-                    size={27}
+                    size={22}
                     className="text-[#08A875]"
                   />
 
@@ -101,12 +120,12 @@ const Signup = () => {
 
 
               {/* 2 */}
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 items-center gap-3 rounded-xl border border-[#DDEBEF] bg-white/70 p-3">
 
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
 
                   <Truck
-                    size={27}
+                    size={22}
                     className="text-[#08A875]"
                   />
 
@@ -128,12 +147,12 @@ const Signup = () => {
 
 
               {/* 3 */}
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 items-center gap-3 rounded-xl border border-[#DDEBEF] bg-white/70 p-3">
 
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
 
                   <CreditCard
-                    size={27}
+                    size={22}
                     className="text-[#08A875]"
                   />
 
@@ -155,12 +174,12 @@ const Signup = () => {
 
 
               {/* 4 */}
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 items-center gap-3 rounded-xl border border-[#DDEBEF] bg-white/70 p-3">
 
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#DDF7F0]">
 
                   <Headphones
-                    size={27}
+                    size={22}
                     className="text-[#08A875]"
                   />
 
@@ -190,15 +209,15 @@ const Signup = () => {
         {/* =====================================================
             RIGHT SIDE
         ====================================================== */}
-        <div className="w-full h-screen min-h-0 flex items-center justify-center p-3 sm:p-4 lg:p-5">
+        <div className="h-screen min-h-0 w-full overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-5">
 
           {/* WHITE CARD */}
           <div
             className="
               w-full
               max-w-[760px]
-              h-full
-              min-h-0
+              mx-auto
+              min-h-[calc(100vh-1.5rem)]
               bg-white
               rounded-[28px]
               border
@@ -252,15 +271,9 @@ const Signup = () => {
             ================================================== */}
             <div
               className="
-                flex-1
-                min-h-0
-                overflow-y-auto
                 px-6
                 sm:px-8
                 pb-6
-                scrollbar-thin
-                scrollbar-thumb-[#B9D9D0]
-                scrollbar-track-transparent
               "
             >
 
@@ -297,7 +310,7 @@ const Signup = () => {
 
                     <div className="min-w-0 pr-7">
 
-                      <p className="text-sm font-bold text-[#0B3154]">
+                      <p className="text-sm font-bold text-[#0B3154]" >
                         I am a Customer
                       </p>
 
@@ -382,7 +395,7 @@ const Signup = () => {
               {/* =================================================
                   FORM
               ================================================== */}
-              <form>
+              <form >
 
                 {/* Full Name */}
                 <div>
@@ -402,6 +415,7 @@ const Signup = () => {
                       type="text"
                       placeholder="Enter your full name"
                       className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      onChange={(e)=>{setFormData({...formData,name:e.target.value})}}
                     />
 
                   </div>
@@ -427,6 +441,7 @@ const Signup = () => {
                       type="text"
                       placeholder="Enter your email or phone number"
                       className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      onChange={(e)=>{setFormData({...formData,email:e.target.value})}}
                     />
 
                   </div>
@@ -452,6 +467,7 @@ const Signup = () => {
                       type="password"
                       placeholder="Create a password"
                       className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      onChange={(e)=>{setFormData({...formData,password:e.target.value})}}
                     />
 
                     
@@ -479,6 +495,7 @@ const Signup = () => {
                       type="password"
                       placeholder="Confirm your password"
                       className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      onChange={(e)=>{setFormData({...formData,confirmPassword:e.target.value})}}
                     />
 
                     
@@ -535,6 +552,7 @@ const Signup = () => {
                     transition
                     hover:bg-[#078F65]
                   "
+                 onClick={handleSignup}
                 >
 
                   Create Account

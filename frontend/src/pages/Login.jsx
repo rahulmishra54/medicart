@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   Mail,
   Lock,
@@ -14,7 +15,9 @@ import {
   Store,
 } from "lucide-react";
 import logo from "../assets/logo.png";
-
+import {useDispatch} from "react-redux";
+import {login} from "../redux/authSlice.js";
+import api from "../api/api.js";
 // =====================================================
 // LEFT SIDE BENEFITS
 // =====================================================
@@ -58,6 +61,7 @@ const inputClass =
 
 const Login = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState("customer");
@@ -66,22 +70,57 @@ const Login = () => {
   // LOGIN SUBMIT
   // =====================================================
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
 
     const formData = new FormData(e.target);
 
     const loginData = {
+
       identifier: formData.get("identifier"),
       password: formData.get("password"),
       accountType: accountType,
       remember: formData.get("remember"),
     };
-
+    console.log(accountType);
     console.log(loginData);
 
-    // API call will come here later
+    try{
+      if(accountType === "customer"){
+      const response = await api.post("/auth/login",loginData)
+      dispatch(login(response.data));
+      if(response.data.user.role==="admin"){
+        navigate("/admin/Category")
+      }
+      console.log(response.data);
+      
+      }else{
+        const response = await api.post("/auth/pharmacists/login",loginData)
+        dispatch(login(response.data));
+       
+
+        if(response.data.user.status === "pending"){
+          navigate("/pharmacist/registration-submitted");
+        }
+        else if(response.data.user.status ==="rejected"){
+          alert("Your pharmacist account has been rejected. Please contact support for more information.");
+        }
+        else{
+          navigate("/pharmacist");
+        }
+      }
+    }
+    catch(error){
+      console.log(error.response.data.message);
+
+    }
+
+
+    
+
+    
   };
+  
 
   return (
     <div className="h-screen w-full overflow-hidden bg-[#F2FAF9] flex">
@@ -95,7 +134,8 @@ const Login = () => {
           hidden
           lg:flex
           lg:w-1/2
-          h-full
+          h-screen
+          shrink-0
           flex-col
           justify-center
           px-10
@@ -109,11 +149,11 @@ const Login = () => {
           src={logo}
           alt="MediCart"
           className="
-            w-40
-            xl:w-44
+            w-36
+            xl:w-40
             h-auto
             object-contain
-            mb-8
+            mb-6
           "
         />
 
@@ -121,17 +161,15 @@ const Login = () => {
 
         <h1
           className="
-            text-5xl
-            xl:text-6xl
+            text-4xl
+            xl:text-5xl
             font-bold
-            leading-[0.98]
+            leading-tight
             tracking-tight
             text-[#0B3154]
           "
         >
-          Your
-          <br />
-          Health,
+          Your Health,
           <br />
           Our <span className="text-[#08A875]">Priority</span>
         </h1>
@@ -140,41 +178,37 @@ const Login = () => {
 
         <p
           className="
-            mt-6
-            max-w-xl
-            text-lg
-            leading-8
+            mt-4
+            max-w-lg
+            text-base
+            xl:text-lg
+            leading-7
             text-[#667B98]
           "
         >
-          Genuine medicines, trusted pharmacies and expert
-          <br />
-          support —
-          <br />
-          delivered to your doorstep.
+          Genuine medicines, trusted pharmacies and expert support — delivered to your doorstep.
         </p>
 
         {/* BENEFITS */}
 
         <div
           className="
-            mt-8
+            mt-6
             grid
             grid-cols-2
-            gap-x-10
-            gap-y-6
+            gap-3
             max-w-xl
           "
         >
           {benefits.map(({ icon: Icon, title, text }) => (
             <div
               key={title}
-              className="flex items-center gap-4"
+              className="flex min-w-0 items-center gap-3 rounded-xl border border-[#DDEBEF] bg-white/70 p-3"
             >
               <div
                 className="
-                  w-16
-                  h-16
+                  w-12
+                  h-12
                   rounded-full
                   bg-[#DDF7F0]
                   flex
@@ -184,17 +218,17 @@ const Login = () => {
                 "
               >
                 <Icon
-                  size={28}
+                  size={21}
                   strokeWidth={2}
                   className="text-[#08A875]"
                 />
               </div>
 
-              <div className="leading-6">
+              <div className="min-w-0 leading-5">
                 <p
                   className="
-                    text-base
-                    xl:text-lg
+                    text-sm
+                    xl:text-base
                     font-bold
                     text-[#0B3154]
                   "
@@ -204,8 +238,8 @@ const Login = () => {
 
                 <p
                   className="
-                    text-base
-                    xl:text-lg
+                    text-sm
+                    xl:text-base
                     text-[#667B98]
                   "
                 >
@@ -225,7 +259,11 @@ const Login = () => {
         className="
           w-full
           lg:w-1/2
-          h-full
+          h-screen
+          min-h-0
+          overflow-x-hidden
+          overflow-y-auto
+          overscroll-contain
           flex
           items-center
           justify-center

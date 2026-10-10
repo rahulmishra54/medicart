@@ -3,8 +3,11 @@ import User from "../models/user.model.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
-    // Get access token from cookie
-    const accessToken = req.cookies.accessToken;
+    console.log(req.body)
+    console.log(req.cookies)
+    
+    const accessToken =  req.cookies.token;
+    console.log(accessToken)
 
     if (!accessToken) {
       return res.status(401).json({

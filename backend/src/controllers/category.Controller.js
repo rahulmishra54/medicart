@@ -1,9 +1,12 @@
 import Category from "../models/category.model.js";
+import Medicine from "../models/medicine.model.js";
 
 
 const createCategory = async (req, res) => {
     try{
+     
         const { name,description,active } = req.body;
+        console.log(name,description,active)
 
         if(!name){
             return res.status(400).json({
@@ -38,6 +41,7 @@ const createCategory = async (req, res) => {
 
 const getAllCategories = async (req, res) => {
   try {
+    
     const categories = await Category.find();
 
     return res.status(200).json({
@@ -179,11 +183,38 @@ const deleteCategory = async (req, res) => {
   }
 };
 
+
+const getCategoryStats = async(req,res)=>{
+  try{
+    const totalCategories = await Category.countDocuments();
+    const activeCategories = await Category.countDocuments({active:true})
+    const inactiveCategories = await Category.countDocuments({active:false})
+    const productsAcrossCategories = await Medicine.countDocuments();
+
+    return res.status(200).json({
+      message :"Category statistics fetched successfully",
+      success : true,
+      stats : {
+        totalCategories,
+        activeCategories,
+        inactiveCategories,
+        productsAcrossCategories
+      }
+    })
+  }catch(error){
+    return res.status(500).json({
+      message : "Internal server error",
+      success : false
+    })
+  }
+}
+
 export{
     createCategory,
     getAllCategories,
-    getCategoryById,
+    getCategoryById, 
     updateCategory,
-    deleteCategory
+    deleteCategory,
+    getCategoryStats
     
 }

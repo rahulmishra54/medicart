@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   User,
   Building2,
@@ -6,21 +6,63 @@ import {
   Phone,
   MapPin,
   FileText,
+  Lock,
   ArrowRight,
 } from "lucide-react";
 
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import {useDispatch} from "react-redux";
 
+import { registerPharmisct } from "../redux/pharmisctAuthSlice.js";
 const PharmacySignup = () => {
-    const navigate = useNavigate();
+  const dispatch = useDispatch()
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handlePharmacySignup = async (event) => {
+    event.preventDefault();
+
+    if (isSubmitting) return;
+
+    const formValues = new FormData(event.currentTarget);
+    const requestData = {
+      name: formValues.get("name"),
+      email: formValues.get("email"),
+      phone: formValues.get("phone"),
+      address: formValues.get("address"),
+      licenseNumber: formValues.get("licenseNumber"),
+      password: formValues.get("password"),
+      confirmPassword: formValues.get("confirmPassword"),
+    };
+
+    console.log("PHARMACIST REGISTER REQUEST:", requestData);
+    setIsSubmitting(true);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:4000/api/v1/auth/pharmacists/register",
+        requestData,
+        { headers: { "Content-Type": "application/json" } },
+      );
+      dispatch(registerPharmisct(response.data));
+      navigate("/pharmacist/registration-submitted");
+    } catch (error) {
+      console.log("PHARMACIST REGISTER ERROR:", error.response?.data);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="h-screen overflow-hidden bg-[#f5fbfa] flex">
+    <div className="flex h-screen overflow-hidden bg-[#f5fbfa]">
 
       {/* =====================================================
           LEFT SIDE
       ====================================================== */}
-      <div className="hidden lg:flex w-1/2 h-screen px-14 xl:px-20 flex-col justify-center">
+
+      <div className="hidden h-screen shrink-0 flex-col justify-center px-8 lg:flex lg:w-1/2 xl:px-14 2xl:px-20">
 
         {/* Logo */}
         <div className="mb-10">
@@ -73,7 +115,6 @@ const PharmacySignup = () => {
 
           </div>
 
-
           {/* Verified Partners */}
           <div className="flex items-center gap-4">
 
@@ -97,24 +138,27 @@ const PharmacySignup = () => {
           </div>
 
         </div>
-
       </div>
 
 
       {/* =====================================================
           RIGHT SIDE
       ====================================================== */}
-      <div className="w-full lg:w-1/2 h-screen min-h-0 p-3 flex">
+
+      <div className="h-screen min-h-0 w-full overflow-x-hidden overflow-y-auto overscroll-contain p-3 lg:w-1/2">
 
         {/* WHITE CARD */}
-        <div className="w-full h-full min-h-0 bg-white rounded-[30px] shadow-[0_12px_45px_rgba(20,70,90,0.10)] flex flex-col overflow-hidden">
+
+        <div className="mx-auto flex w-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[30px] bg-white shadow-[0_12px_45px_rgba(20,70,90,0.10)]">
 
           {/* =================================================
               FIXED HEADER
           ================================================== */}
+
           <div className="shrink-0 px-6 sm:px-8 xl:px-10 pt-5 pb-4">
 
             {/* Logo */}
+
             <div className="flex justify-center">
 
               <img
@@ -125,8 +169,8 @@ const PharmacySignup = () => {
 
             </div>
 
-
             {/* Heading */}
+
             <div className="text-center mt-2">
 
               <h2 className="text-2xl sm:text-3xl font-bold text-[#123b61]">
@@ -145,27 +189,24 @@ const PharmacySignup = () => {
           {/* =================================================
               SCROLLABLE RIGHT CONTENT
           ================================================== */}
+
           <div
             className="
-              flex-1
-              min-h-0
-              overflow-y-auto
-              overscroll-contain
               px-6
               sm:px-8
               xl:px-10
               pb-6
-              [scrollbar-width:thin]
-              [scrollbar-color:#b8d9ce_transparent]
             "
           >
 
             {/* =================================================
                 CUSTOMER / PARTNER SELECTION
             ================================================== */}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
 
               {/* CUSTOMER */}
+
               <div
                 className="
                   border-2
@@ -181,7 +222,9 @@ const PharmacySignup = () => {
                   hover:border-emerald-400
                   transition
                 "
-                onClick={()=>{navigate("/register");}}
+                onClick={() => {
+                  navigate("/register");
+                }}
               >
 
                 <div className="w-12 h-12 rounded-full bg-[#f1f5f8] flex items-center justify-center shrink-0">
@@ -192,7 +235,6 @@ const PharmacySignup = () => {
                   />
 
                 </div>
-
 
                 <div className="min-w-0">
 
@@ -210,6 +252,7 @@ const PharmacySignup = () => {
 
 
               {/* PARTNER - SELECTED */}
+
               <div
                 className="
                   border-2
@@ -233,7 +276,6 @@ const PharmacySignup = () => {
 
                 </div>
 
-
                 <div className="min-w-0">
 
                   <h3 className="font-bold text-base text-[#123b61]">
@@ -246,11 +288,8 @@ const PharmacySignup = () => {
 
                 </div>
 
-
                 <div className="ml-auto w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
-
                   ✓
-
                 </div>
 
               </div>
@@ -261,9 +300,11 @@ const PharmacySignup = () => {
             {/* =================================================
                 FORM
             ================================================== */}
-            <form className="flex flex-col gap-4">
+
+            <form className="flex flex-col gap-4" onSubmit={handlePharmacySignup}>
 
               {/* Pharmacy Name */}
+
               <div>
 
                 <label
@@ -272,7 +313,6 @@ const PharmacySignup = () => {
                 >
                   Pharmacy Name
                 </label>
-
 
                 <div className="relative">
 
@@ -316,9 +356,11 @@ const PharmacySignup = () => {
 
 
               {/* Email + Phone */}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Email */}
+
                 <div>
 
                   <label
@@ -327,7 +369,6 @@ const PharmacySignup = () => {
                   >
                     Email
                   </label>
-
 
                   <div className="relative">
 
@@ -371,6 +412,7 @@ const PharmacySignup = () => {
 
 
                 {/* Phone */}
+
                 <div>
 
                   <label
@@ -379,7 +421,6 @@ const PharmacySignup = () => {
                   >
                     Phone Number
                   </label>
-
 
                   <div className="relative">
 
@@ -425,6 +466,7 @@ const PharmacySignup = () => {
 
 
               {/* Pharmacy Address */}
+
               <div>
 
                 <label
@@ -433,7 +475,6 @@ const PharmacySignup = () => {
                 >
                   Pharmacy Address
                 </label>
-
 
                 <div className="relative">
 
@@ -477,6 +518,7 @@ const PharmacySignup = () => {
 
 
               {/* Drug License Number */}
+
               <div>
 
                 <label
@@ -485,7 +527,6 @@ const PharmacySignup = () => {
                 >
                   Drug License Number
                 </label>
-
 
                 <div className="relative">
 
@@ -528,7 +569,112 @@ const PharmacySignup = () => {
               </div>
 
 
+              {/* Password */}
+
+              <div>
+
+                <label
+                  htmlFor="password"
+                  className="block mb-1.5 text-sm font-semibold text-[#123b61]"
+                >
+                  Password
+                </label>
+
+                <div className="relative">
+
+                  <Lock
+                    size={19}
+                    className="
+                      absolute
+                      left-4
+                      top-1/2
+                      -translate-y-1/2
+                      text-[#7891aa]
+                    "
+                  />
+
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Create your password"
+                    className="
+                      w-full
+                      h-12
+                      pl-12
+                      pr-4
+                      rounded-xl
+                      border
+                      border-[#d3dfeb]
+                      outline-none
+                      text-sm
+                      text-[#123b61]
+                      placeholder:text-[#8ba0b5]
+                      focus:border-emerald-500
+                      focus:ring-2
+                      focus:ring-emerald-100
+                    "
+                  />
+
+                </div>
+
+              </div>
+
+
+              {/* Confirm Password */}
+
+              <div>
+
+                <label
+                  htmlFor="confirmPassword"
+                  className="block mb-1.5 text-sm font-semibold text-[#123b61]"
+                >
+                  Confirm Password
+                </label>
+
+                <div className="relative">
+
+                  <Lock
+                    size={19}
+                    className="
+                      absolute
+                      left-4
+                      top-1/2
+                      -translate-y-1/2
+                      text-[#7891aa]
+                    "
+                  />
+
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    className="
+                      w-full
+                      h-12
+                      pl-12
+                      pr-4
+                      rounded-xl
+                      border
+                      border-[#d3dfeb]
+                      outline-none
+                      text-sm
+                      text-[#123b61]
+                      placeholder:text-[#8ba0b5]
+                      focus:border-emerald-500
+                      focus:ring-2
+                      focus:ring-emerald-100
+                    "
+                  />
+
+                </div>
+
+              </div>
+
+
               {/* Terms */}
+
               <div className="flex items-start gap-2">
 
                 <input
@@ -555,8 +701,10 @@ const PharmacySignup = () => {
 
 
               {/* Register Button */}
+
               <button
-                type="button"
+                type="submit"
+                disabled={isSubmitting}
                 className="
                   w-full
                   h-12
@@ -573,17 +721,13 @@ const PharmacySignup = () => {
                   transition
                 "
               >
-                Register Pharmacy
+                {isSubmitting ? "Registering..." : "Register Pharmacy"}
 
                 <ArrowRight size={19} />
 
               </button>
 
             </form>
-
-
-            
-            
 
           </div>
 

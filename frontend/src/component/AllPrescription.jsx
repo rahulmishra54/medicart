@@ -10,12 +10,12 @@ import {
 
 const PharmacySignup = () => {
   return (
-    <div className="h-screen overflow-hidden bg-[#f5fbfa] flex">
+    <div className="flex h-screen overflow-hidden bg-[#f5fbfa]">
 
       {/* =====================================================
           LEFT SIDE
       ====================================================== */}
-      <div className="hidden lg:flex w-1/2 h-screen px-14 xl:px-20 flex-col justify-center">
+      <div className="hidden h-screen shrink-0 flex-col justify-center px-8 lg:flex lg:w-1/2 xl:px-14 2xl:px-20">
 
         {/* Logo */}
         <div className="flex items-center gap-3 mb-10">
@@ -112,10 +112,10 @@ const PharmacySignup = () => {
       {/* =====================================================
           RIGHT SIDE
       ====================================================== */}
-      <div className="w-full lg:w-1/2 h-full min-h-0 p-3 flex">
+      <div className="h-screen min-h-0 w-full overflow-x-hidden overflow-y-auto overscroll-contain p-3 lg:w-1/2">
 
         {/* WHITE CARD */}
-        <div className="w-full h-full min-h-0 bg-white rounded-[30px] shadow-[0_12px_45px_rgba(20,70,90,0.10)] flex flex-col overflow-hidden">
+        <div className="mx-auto flex w-full min-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[30px] bg-white shadow-[0_12px_45px_rgba(20,70,90,0.10)]">
 
           {/* =================================================
               FIXED CARD HEADER
@@ -161,15 +161,10 @@ const PharmacySignup = () => {
           ================================================== */}
           <div
             className="
-              flex-1
-              min-h-0
-              overflow-y-auto
               px-6
               sm:px-8
               xl:px-10
               pb-6
-              [scrollbar-width:thin]
-              [scrollbar-color:#b8d9ce_transparent]
             "
           >
 

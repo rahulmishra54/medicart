@@ -10,9 +10,25 @@ import {
 } from "lucide-react";
 
 import logo from "../assets/logo.png";
+import {useNavigate} from "react-router-dom"
+import api from "../api/api.js"
+const PharmistNavBar =()=>{
+  const [expand,setExpand]=useState(false)
+  const navigate = useNavigate();
 
-const PharmistNavBar = () => {
-  const [expand, setExpand] = useState(false);
+  async function logoutUser(){
+    try{
+
+      const response = await api.post("/auth/logout");
+      console.log(response.data);
+      navigate("/login");
+    }catch(error){
+      console.log(error)
+    }
+  }
+  
+
+
 
   return (
     <header className="w-full bg-white border-b border-[#E6EEF2]">
@@ -56,7 +72,7 @@ const PharmistNavBar = () => {
 
             <input
               type="text"
-              placeholder="Search medicines, orders, customers..."
+              placeholder="Search..."
               className="
                 w-full
                 h-10
@@ -193,11 +209,11 @@ const PharmistNavBar = () => {
                     whitespace-nowrap
                   "
                 >
-                  Sharma Medical Store
+                  MediCart Admin
                 </span>
 
                 <span className="text-[11px] text-[#718096]">
-                  Pharmacist
+                  Account
                 </span>
 
               </div>
@@ -264,11 +280,11 @@ const PharmistNavBar = () => {
                 >
 
                   <p className="text-sm font-semibold text-[#17324D]">
-                    Sharma Medical Store
+                  MediCart Admin
                   </p>
 
                   <p className="text-xs text-[#718096] mt-1">
-                    Pharmacist Account
+                     Account
                   </p>
 
                 </div>
@@ -438,6 +454,7 @@ const PharmistNavBar = () => {
                       hover:bg-red-50
                       transition
                     "
+                    onClick={logoutUser}
                   >
 
                     <div
@@ -456,6 +473,8 @@ const PharmistNavBar = () => {
                       <LogOut
                         size={18}
                         className="text-red-500"
+                        
+                       
                       />
 
                     </div>
@@ -508,7 +527,7 @@ const PharmistNavBar = () => {
 
           <input
             type="text"
-            placeholder="Search medicines, orders, customers..."
+            placeholder="Search..."
             className="
               w-full
               h-10
@@ -556,7 +575,7 @@ const PharmistNavBar = () => {
 
           <input
             type="text"
-            placeholder="Search medicines, orders..."
+            placeholder="Search..."
             className="
               w-full
               h-10
@@ -584,6 +603,6 @@ const PharmistNavBar = () => {
 
     </header>
   );
-};
 
+}
 export default PharmistNavBar;

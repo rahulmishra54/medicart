@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  ArrowLeft,
   Camera,
   Upload,
   Plus,
@@ -12,10 +11,6 @@ const AddProductImages = () => {
     <div className="min-h-screen bg-[#F5FAFC] p-3 sm:p-5 lg:p-7">
 
       <div className="max-w-5xl mx-auto">
-
-       830 588 173
-       zvcuqf3z
-
 
         {/*  PRODUCT IMAGES */}
 

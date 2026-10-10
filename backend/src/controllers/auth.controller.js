@@ -13,6 +13,7 @@ const registerUser = async (req, res) => {
       address,
       dateOfBirth,
     } = req.body;
+    
 
     // 1. Required fields
     if (!name || !email || !password || !confirmPassword) {
@@ -84,6 +85,7 @@ const registerUser = async (req, res) => {
         email: newUser.email,
         role: newUser.role,
       },
+        success: true,
     });
 
   } catch (error) {
@@ -99,17 +101,23 @@ const registerUser = async (req, res) => {
 
 const loginUser = async(req,res)=>{
     try{
-    const {email,password} = req.body;
-    if(!email || !password) {
+    const {identifier,password} = req.body;
+    console.log(identifier,password)
+    if(!identifier || !password) {
         return res.status(400).json({
             message: "Email and password are required",
             success: false,
         });
     }
-    const user = await User.findOne({email});
+    const user = await User.findOne({
+  $or: [
+    { email: identifier },
+    { mobile: identifier }
+  ]
+});
     if (!user) {
         return res.status(400).json({
-            message: "Invalid email or password",
+            message: "Invalid identifier or password",
             success: false,
         });
     }
@@ -117,7 +125,7 @@ const loginUser = async(req,res)=>{
     const isPasswordValid = await bcrypt.compare(password,user.password);
     if(!isPasswordValid) {
         return res.status(400).json({
-            message: "Invalid email or password",
+            message: "Invalid identifier or password",
             success: false,
         });
     }
@@ -162,17 +170,23 @@ const loginUser = async(req,res)=>{
 
 const pharmistLogin = async(req,res)=>{
     try{
-    const {email,password} = req.body;
-    if(!email || !password) {
+    const {identifier,password} = req.body;
+    console.log(identifier,password,req.body.identifier);
+    if(!identifier || !password) {
         return res.status(400).json({
-            message: "Email and password are required",
+            message: "Identifier and password are required",
             success: false,
         });
     }
-    const user = await pharmacy.findOne({email});
+    const user = await pharmacy.findOne({
+  $or: [
+    { email: identifier },
+    { mobile: identifier }
+  ]
+});
     if (!user) {
         return res.status(400).json({
-            message: "Invalid email or password",
+            message: "Invalid identifier or password",
             success: false,
         });
     }
@@ -180,7 +194,7 @@ const pharmistLogin = async(req,res)=>{
     const isPasswordValid = await bcrypt.compare(password,user.password);
     if(!isPasswordValid) {
         return res.status(400).json({
-            message: "Invalid email or password",
+            message: "Invalid identifier or password",
             success: false,
         });
     }
@@ -210,6 +224,7 @@ const pharmistLogin = async(req,res)=>{
             name: user.name,
             email: user.email,
             role: user.role,
+            status:user.status
         },
     });
 }catch (error) {
@@ -243,13 +258,20 @@ const pharmistRegister = async (req, res) => {
         email,
         password,
         phone,address,
-        licenseNumber
+        licenseNumber,confirmPassword
     } = req.body;
 
-    if (!name || !email || !password || !phone || !address || !licenseNumber) {
+    if (!name || !email || !password || !phone || !address || !licenseNumber || !confirmPassword || !password) {
         return res.status(400).json({
             message: "All fields are required",
             success: false
+        });
+
+    }
+    if (password !== confirmPassword) {
+        return res.status(400).json({
+            message: "Passwords do not match",
+            success: false,
         });
     }
 
@@ -260,6 +282,7 @@ const pharmistRegister = async (req, res) => {
             success: false
         });
     }
+
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await pharmacy.create({
@@ -280,7 +303,8 @@ const pharmistRegister = async (req, res) => {
             email: user.email,
             phone: user.phone,
             address: user.address,
-            licenseNumber: user.licenseNumber
+            licenseNumber: user.licenseNumber,
+            status: user.status
         }
     });
   } catch (error) {
