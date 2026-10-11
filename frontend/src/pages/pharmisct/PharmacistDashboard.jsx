@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import InventoryStats from "../../component/InventoryStats.jsx";
 import PharmacistLayout from "./PharmacistLayout.jsx";
+import api from "../../api/api.js";
 
 const recentOrders = [
   { id: "MC-2048", customer: "Aarav Sharma", date: "05 Oct 2026", total: "₹842", status: "Processing" },
@@ -8,8 +10,31 @@ const recentOrders = [
   { id: "MC-2046", customer: "Kabir Singh", date: "04 Oct 2026", total: "₹395", status: "Delivered" },
 ];
 
-const PharmacistDashboard = () => (
-  <PharmacistLayout>
+const PharmacistDashboard = () => {
+  const [stats, setStats] = useState({
+    totalMedicines: 0,
+    inStockMedicines: 0,
+    lowStockMedicines: 0,
+    outOfStockMedicines: 0,
+  });
+
+  useEffect(() => {
+    const fetchInventoryStats = async () => {
+      try {
+        const response = await api.get("/inventory/stats");
+        if (response.data.success && response.data.data) {
+          setStats(response.data.data);
+        }
+      } catch (error) {
+        console.error("Unable to load inventory statistics:", error);
+      }
+    };
+
+    fetchInventoryStats();
+  }, []);
+
+  return (
+    <PharmacistLayout>
     <div className="mx-auto max-w-7xl space-y-7 p-4 sm:p-6 lg:p-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -22,7 +47,7 @@ const PharmacistDashboard = () => (
         </Link>
       </header>
 
-      <InventoryStats />
+      <InventoryStats stats={stats} />
 
       <section className="overflow-hidden rounded-xl border border-[#E2EDF1] bg-white">
         <div className="flex items-center justify-between gap-3 border-b border-[#EEF3F5] px-4 py-4 sm:px-5">
@@ -51,6 +76,7 @@ const PharmacistDashboard = () => (
       </section>
     </div>
   </PharmacistLayout>
-);
+  );
+};
 
 export default PharmacistDashboard;

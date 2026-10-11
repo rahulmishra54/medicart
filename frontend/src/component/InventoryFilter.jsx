@@ -1,11 +1,12 @@
-const filters = [
-  { label: "All", count: 48 },
-  { label: "In Stock", count: 39 },
-  { label: "Low Stock", count: 6 },
-  { label: "Out of Stock", count: 3 },
-];
 
-const InventoryFilters = ({ activeFilter, setActiveFilter }) => {
+
+const InventoryFilters = ({ activeFilter, setActiveFilter ,stats}) => {
+  const filters = [
+  { label: "All", count: stats.totalMedicines },
+  { label: "In Stock", count: stats.inStockMedicines },
+  { label: "Low Stock", count: stats.lowStockMedicines },
+  { label: "Out of Stock", count: stats.outOfStockMedicines },
+];
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
       {filters.map((filter) => {

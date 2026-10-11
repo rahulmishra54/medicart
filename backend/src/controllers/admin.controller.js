@@ -80,7 +80,7 @@ const getAllPharmacies = async (req, res) => {
 
 const getPendingPharmacies = async (req, res) => {
   try {
-    const pharmacies = await Pharmacy.find({ status: "pending" });
+    const pharmacies = await Pharmacy.find({ status: "pending" }).select("-password");
 
     res.status(200).json({
       success: true,
@@ -123,11 +123,12 @@ const approvePharmacy = async (req, res) => {
     pharmacy.status = "approved";
 
     await pharmacy.save();
+    const updatedPharmacy = await Pharmacy.findById(id).select("-password");
 
     res.status(200).json({
       success: true,
       message: "Pharmacy approved successfully",
-      pharmacy,
+      pharmacy: updatedPharmacy,
     });
   } catch (error) {
     console.error("Approve Pharmacy Error:", error);
@@ -147,7 +148,7 @@ const getPharmacyById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const pharmacy = await Pharmacy.findById(id);
+    const pharmacy = await Pharmacy.findById(id).select("-password");
 
     if (!pharmacy) {
       return res.status(404).json({
@@ -195,11 +196,12 @@ const rejectPharmacy = async (req, res) => {
     pharmacy.status = "rejected";
 
     await pharmacy.save();
+    const updatedPharmacy = await Pharmacy.findById(id).select("-password");
 
     res.status(200).json({
       success: true,
       message: "Pharmacy rejected successfully",
-      pharmacy,
+      pharmacy: updatedPharmacy,
     });
   } catch (error) {
     console.error("Reject Pharmacy Error:", error);
@@ -211,8 +213,6 @@ const rejectPharmacy = async (req, res) => {
     });
   }
 };
-
-
 
 const getAllMedicines = async (req, res) => {
   try {
@@ -235,5 +235,27 @@ const getAllMedicines = async (req, res) => {
   }
 };
 
-
-export { getAllUsers, getUserById, getAllPharmacies, getPendingPharmacies, approvePharmacy, getPharmacyById, rejectPharmacy, getAllMedicines };
+async function getpharmaciesStats(req,res){
+  try{
+    const totalPharmacies = await Pharmacy.countDocuments();
+    const approvedPharmacies = await Pharmacy.countDocuments({status: /^\s*approved\s*$/i});
+    const rejectedPharmacies = await Pharmacy.countDocuments({status: /^\s*rejected\s*$/i});
+    const pendingPharmacies = totalPharmacies - approvedPharmacies - rejectedPharmacies;
+    return res.status(200).json({
+      message : "Pharmacies stats fetched successfully",
+      success : true,
+      stats :{
+        totalPharmacies,
+        approvedPharmacies,
+        pendingPharmacies,
+        rejectedPharmacies
+      }
+    })
+  }catch(error){
+    return res.status(500).json({
+      message : "Internal server error",
+      success : false
+    })
+  }
+}
+export { getAllUsers, getUserById, getAllPharmacies, getPendingPharmacies, approvePharmacy, getPharmacyById, rejectPharmacy, getAllMedicines,getpharmaciesStats };

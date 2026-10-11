@@ -1,421 +1,124 @@
-import React from "react";
-import {
-  Camera,
-  Upload,
-  Plus,
-  Eye,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Camera, ImagePlus, Trash2, Upload } from "lucide-react";
 
-const AddProductImages = () => {
+const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+const maxImageSize = 5 * 1024 * 1024;
+
+const AddProductImages = ({ image, onImageChange, disabled = false }) => {
+  const inputRef = useRef(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!image) {
+      setPreviewUrl("");
+      if (inputRef.current) inputRef.current.value = "";
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(image);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [image]);
+
+  const chooseImage = (file) => {
+    if (!file) return;
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("Choose a JPG, PNG, or WebP image.");
+      return;
+    }
+
+    if (file.size > maxImageSize) {
+      setError("Image must be 5 MB or smaller.");
+      return;
+    }
+
+    setError("");
+    onImageChange(file);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setDragging(false);
+    chooseImage(event.dataTransfer.files[0]);
+  };
+
+  const removeImage = () => {
+    setError("");
+    onImageChange(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
   return (
-    <div className="min-h-screen bg-[#F5FAFC] p-3 sm:p-5 lg:p-7">
-
-      <div className="max-w-5xl mx-auto">
-
-        {/*  PRODUCT IMAGES */}
-
-        <div className="
-          bg-white
-          border border-[#E2EDF1]
-          rounded-xl
-          p-4 sm:p-5 lg:p-6
-          mb-5
-        ">
-
-          {/* SECTION HEADER */}
-
-          <div className="flex items-center gap-3 mb-5">
-
-            <div className="
-              w-9 h-9
-              rounded-lg
-              bg-[#E5F6F0]
-              flex items-center justify-center
-              shrink-0
-            ">
-              <Camera
-                size={18}
-                className="text-[#15966F]"
-              />
-            </div>
-
-            <div>
-
-              <h2 className="text-sm sm:text-base font-semibold text-[#17324D]">
-                Product Images
-              </h2>
-
-              <p className="text-[11px] sm:text-xs text-[#64748B]">
-                Upload clear images of the product.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* ================= UPLOAD AREA ================= */}
-
-          <div className="
-            min-h-[130px]
-            sm:min-h-[150px]
-            border border-dashed
-            border-[#C9DCE4]
-            rounded-lg
-            bg-[#F8FBFC]
-            flex flex-col
-            items-center justify-center
-            cursor-pointer
-            hover:bg-[#F1F9F6]
-            hover:border-[#15966F]
-            transition
-          ">
-
-            <Upload
-              size={30}
-              className="text-[#64748B] mb-2"
-            />
-
-            <span className="text-xs sm:text-sm font-semibold text-[#17324D]">
-              Click to upload images
-            </span>
-
-            <span className="text-[10px] sm:text-xs text-[#64748B] mt-1">
-              or drag and drop
-            </span>
-
-            <span className="text-[10px] text-[#94A3B8] mt-2">
-              JPG, PNG, WebP (Max 5MB each)
-            </span>
-
-          </div>
-
-
-          {/* ================= IMAGE SLOTS ================= */}
-
-          <div className="
-            grid
-            grid-cols-3
-            sm:grid-cols-5
-            gap-2 sm:gap-3
-            mt-3
-          ">
-
-            <div className="
-              aspect-square
-              rounded-lg
-              border border-dashed
-              border-[#C9DCE4]
-              bg-[#FAFCFD]
-              flex items-center justify-center
-              cursor-pointer
-              hover:bg-[#F1F9F6]
-              hover:border-[#15966F]
-              transition
-            ">
-              <Plus
-                size={21}
-                className="text-[#718096]"
-              />
-            </div>
-
-
-            <div className="
-              aspect-square
-              rounded-lg
-              border border-dashed
-              border-[#C9DCE4]
-              bg-[#FAFCFD]
-              flex items-center justify-center
-              cursor-pointer
-              hover:bg-[#F1F9F6]
-              hover:border-[#15966F]
-              transition
-            ">
-              <Plus
-                size={21}
-                className="text-[#718096]"
-              />
-            </div>
-
-
-            <div className="
-              aspect-square
-              rounded-lg
-              border border-dashed
-              border-[#C9DCE4]
-              bg-[#FAFCFD]
-              flex items-center justify-center
-              cursor-pointer
-              hover:bg-[#F1F9F6]
-              hover:border-[#15966F]
-              transition
-            ">
-              <Plus
-                size={21}
-                className="text-[#718096]"
-              />
-            </div>
-
-
-            <div className="
-              aspect-square
-              rounded-lg
-              border border-dashed
-              border-[#C9DCE4]
-              bg-[#FAFCFD]
-              flex items-center justify-center
-              cursor-pointer
-              hover:bg-[#F1F9F6]
-              hover:border-[#15966F]
-              transition
-            ">
-              <Plus
-                size={21}
-                className="text-[#718096]"
-              />
-            </div>
-
-
-            <div className="
-              aspect-square
-              rounded-lg
-              border border-dashed
-              border-[#C9DCE4]
-              bg-[#FAFCFD]
-              flex items-center justify-center
-              cursor-pointer
-              hover:bg-[#F1F9F6]
-              hover:border-[#15966F]
-              transition
-            ">
-              <Plus
-                size={21}
-                className="text-[#718096]"
-              />
-            </div>
-
-          </div>
-
+    <section className="rounded-xl border border-[#E2EDF1] bg-white p-4 shadow-sm sm:p-6">
+      <div className="mb-5 flex items-center gap-3 border-b border-[#EEF3F5] pb-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#E5F6F0] text-[#15966F]">
+          <Camera size={19} />
+        </span>
+        <div>
+          <h2 className="text-base font-semibold text-[#17324D]">Product images</h2>
+          <p className="mt-0.5 text-sm text-[#718096]">Add one clear primary image for this product.</p>
         </div>
-
-
-        {/* ================= PRODUCT PREVIEW ================= */}
-
-        <div className="
-          bg-white
-          border border-[#E2EDF1]
-          rounded-xl
-          p-4 sm:p-5 lg:p-6
-        ">
-
-          {/* SECTION HEADER */}
-
-          <div className="flex items-center gap-3 mb-5">
-
-            <div className="
-              w-9 h-9
-              rounded-lg
-              bg-[#EDF7FC]
-              flex items-center justify-center
-              shrink-0
-            ">
-              <Eye
-                size={18}
-                className="text-[#237DA8]"
-              />
-            </div>
-
-            <div>
-
-              <h2 className="text-sm sm:text-base font-semibold text-[#17324D]">
-                Product Preview
-              </h2>
-
-              <p className="text-[11px] sm:text-xs text-[#64748B]">
-                This is how your product will appear on the store.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* ================= PRODUCT CARD ================= */}
-
-          <div className="
-            border border-[#E2EDF1]
-            rounded-xl
-            p-3 sm:p-4
-            bg-white
-          ">
-
-            <div className="
-              flex
-              flex-col
-              sm:flex-row
-              gap-4
-            ">
-
-              {/* PRODUCT IMAGE */}
-
-              <div className="
-                w-full
-                sm:w-[150px]
-                h-[160px]
-                sm:h-[150px]
-                rounded-lg
-                bg-[#F6FAFC]
-                flex items-center justify-center
-                shrink-0
-              ">
-
-                <div className="text-center">
-
-                  <Camera
-                    size={30}
-                    className="mx-auto text-[#A0B3BC] mb-2"
-                  />
-
-                  <span className="text-xs text-[#94A3B8]">
-                    Product image
-                  </span>
-
-                </div>
-
-              </div>
-
-
-              {/* PRODUCT INFORMATION */}
-
-              <div className="flex flex-col flex-1 min-w-0">
-
-                <div className="
-                  flex
-                  items-start
-                  justify-between
-                  gap-3
-                ">
-
-                  <div>
-
-                    <h3 className="
-                      text-sm sm:text-base
-                      font-semibold
-                      text-[#17324D]
-                    ">
-                      Paracetamol 500mg
-                    </h3>
-
-                    <p className="
-                      text-xs
-                      text-[#64748B]
-                      mt-1
-                    ">
-                      Crocin
-                    </p>
-
-                  </div>
-
-
-                  <span className="
-                    shrink-0
-                    px-2.5 py-1
-                    rounded-full
-                    bg-[#E5F6F0]
-                    text-[#15966F]
-                    text-[10px]
-                    font-medium
-                  ">
-                    In Stock
-                  </span>
-
-                </div>
-
-
-                {/* CATEGORY */}
-
-                <div className="mt-2">
-
-                  <span className="
-                    inline-flex
-                    px-2 py-1
-                    rounded-md
-                    bg-[#EDF7FC]
-                    text-[#237DA8]
-                    text-[10px]
-                    font-medium
-                  ">
-                    Tablet
-                  </span>
-
-                </div>
-
-
-                {/* PRICE */}
-
-                <div className="
-                  flex
-                  items-center
-                  flex-wrap
-                  gap-3
-                  mt-3
-                ">
-
-                  <span className="
-                    text-xl
-                    font-bold
-                    text-[#15966F]
-                  ">
-                    ₹50
-                  </span>
-
-                  <span className="
-                    text-xs
-                    text-[#94A3B8]
-                    line-through
-                  ">
-                    ₹60
-                  </span>
-
-                  <span className="
-                    px-2 py-1
-                    rounded-full
-                    bg-[#E5F6F0]
-                    text-[#15966F]
-                    text-[10px]
-                    font-medium
-                  ">
-                    17% OFF
-                  </span>
-
-                </div>
-
-
-                {/* DESCRIPTION */}
-
-                <p className="
-                  text-xs
-                  text-[#718096]
-                  leading-5
-                  mt-2
-                  line-clamp-2
-                ">
-                  Effective relief from fever and mild to moderate pain
-                  such as headache, body ache, toothache...
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
       </div>
 
-    </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        aria-label="Choose product image"
+        disabled={disabled}
+        onChange={(event) => chooseImage(event.target.files[0])}
+      />
+
+      {!image ? (
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          className={`flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed px-4 py-6 text-center transition ${dragging ? "border-[#15966F] bg-[#F1F9F6]" : "border-[#C9DCE4] bg-[#F8FBFC]"}`}
+        >
+          <Upload size={25} className="mb-2 text-[#237DA8]" aria-hidden="true" />
+          <p className="text-sm font-semibold text-[#17324D]">Drop an image here</p>
+          <p className="mt-1 text-xs text-[#718096]">JPG, PNG, or WebP, up to 5 MB</p>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => inputRef.current?.click()}
+            className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg border border-[#15966F] bg-white px-4 text-sm font-semibold text-[#117F5E] transition hover:bg-[#E5F6F0] disabled:opacity-50"
+          >
+            <ImagePlus size={17} aria-hidden="true" />
+            Choose Images
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          <div className="relative aspect-square overflow-hidden rounded-lg border-2 border-[#15966F] bg-[#F8FBFC]">
+            {previewUrl && <img src={previewUrl} alt="Primary product preview" className="h-full w-full object-cover" />}
+            <span className="absolute left-2 top-2 rounded-full bg-[#15966F] px-2.5 py-1 text-xs font-semibold text-white">
+              Primary
+            </span>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={removeImage}
+              aria-label="Remove product image"
+              title="Remove image"
+              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50"
+            >
+              <Trash2 size={15} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+    </section>
   );
 };
 

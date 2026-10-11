@@ -133,7 +133,7 @@ const loginUser = async(req,res)=>{
     const token = jwt.sign(
         {
             userId: user._id,
-            role: user.role,
+          role: user.role,
         },
         process.env.JWT_SECRET,
         {
@@ -202,7 +202,7 @@ const pharmistLogin = async(req,res)=>{
     const token = jwt.sign(
         {
             userId: user._id,
-            role: user.role,
+              role: "pharmacist",
         },
         process.env.JWT_SECRET,
         {
@@ -223,7 +223,7 @@ const pharmistLogin = async(req,res)=>{
             id: user._id,
             name: user.name,
             email: user.email,
-            role: user.role,
+            role: "pharmacist",
             status:user.status
         },
     });
@@ -291,7 +291,8 @@ const pharmistRegister = async (req, res) => {
         password: hashedPassword,
         phone,
         address,
-        licenseNumber
+        licenseNumber,
+        status: "pending",
     });
 
     return res.status(201).json({

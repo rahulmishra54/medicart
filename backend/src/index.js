@@ -6,6 +6,7 @@ import medicineRoutes from "./routes/medicine.routes.js";
 import orderRoutes from "./routes/order.routes.js";
 import prescriptionRoutes from "./routes/prescription.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import inventoryRoutes from "./routes/inventory.routes.js";
 
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -25,5 +26,6 @@ app.use("/api/v1/medicines", medicineRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/prescriptions", prescriptionRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/inventory", inventoryRoutes);
 
 export default app;

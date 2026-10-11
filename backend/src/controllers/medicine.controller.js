@@ -1,37 +1,122 @@
 import Medicine from "../models/medicine.model.js";
+import { uploadImage } from "../services/cloudinary.js";
 
-const addMedicine = async (req,res)=>{
-    try{
-
-        const {name,brand,genericName,manufacturer,description,category,subCategory,price,mrp,stockQuantity,dosageForm,prescriptionRequired,expiryDate,image,featured,active} = req.body;
-
-        if(!name || !brand || !manufacturer || !description || !category || !price || !mrp || !stockQuantity || !dosageForm || !prescriptionRequired || !expiryDate || !image){
-            return res.status(400).json({
-                message: "All fields are required",
-                success: false
-            });
-        }
-
-
-        const newMedicine = new Medicine({
-            name,brand,genericName,manufacturer,description,category,subCategory,price,mrp,stockQuantity,dosageForm,prescriptionRequired,expiryDate,image,featured,active
-        })
-
-        await newMedicine.save();
-
-        return res.status(201).json({
-            message: "Medicine added successfully",
-            success: true,
-            medicine: newMedicine
-        })
-
-    }catch(error){
-        return res.status(500).json({
-            message: "Internal server error",
-            success:false
-        });
+const addMedicine = async (req, res) => {
+  try {
+    if (req.user?.role !== "pharmacist") {
+      return res.status(403).json({
+        message: "Only pharmacists can add medicines",
+        success: false,
+      });
     }
-}
+
+    const {
+      name,
+      brand,
+      genericName,
+      manufacturer,
+      description,
+      category,
+      subCategory,
+      price,
+      mrp,
+      stockQuantity,
+      dosageForm,
+      prescriptionRequired,
+      expiryDate,
+      featured,
+      active,
+    } = req.body;
+
+    if (!name?.trim() || !brand?.trim() || !manufacturer?.trim()
+      || !description?.trim() || !category || price === undefined || price === ""
+      || mrp === undefined || mrp === "" || stockQuantity === undefined || stockQuantity === ""
+      || !expiryDate) {
+      return res.status(400).json({
+        message: "Complete all required medicine fields",
+        success: false,
+      });
+    }
+
+    const numericPrice = Number(price);
+    const numericMrp = Number(mrp);
+    const numericStock = Number(stockQuantity);
+    if (!Number.isFinite(numericPrice) || numericPrice < 0
+      || !Number.isFinite(numericMrp) || numericMrp < 0
+      || !Number.isInteger(numericStock) || numericStock < 0) {
+      return res.status(400).json({
+        message: "Prices must be non-negative and stock must be a whole number",
+        success: false,
+      });
+    }
+
+    if (req.file && (!["image/jpeg", "image/png", "image/webp"].includes(req.file.mimetype)
+      || req.file.size > 5 * 1024 * 1024)) {
+      return res.status(400).json({
+        message: "Choose a JPG, PNG, or WebP image up to 5 MB",
+        success: false,
+      });
+    }
+
+    const newMedicine = new Medicine({
+      name: name.trim(),
+      brand: brand.trim(),
+      genericName,
+      manufacturer: manufacturer.trim(),
+      description: description.trim(),
+      category,
+      subCategory,
+      price: numericPrice,
+      mrp: numericMrp,
+      stockQuantity: numericStock,
+      dosageForm: dosageForm || undefined,
+      prescriptionRequired: prescriptionRequired === "true" || prescriptionRequired === true,
+      expiryDate,
+      featured: featured === "true" || featured === true,
+      active: active !== "false" && active !== false,
+      pharmacy: req.user._id,
+    });
+
+    await newMedicine.validate();
+
+    if (req.file) {
+      let uploadedImage;
+      try {
+        uploadedImage = await uploadImage(req.file, "medicart/medicines");
+      } catch (error) {
+        console.error("Medicine image upload error:", error);
+        return res.status(502).json({
+          message: "Image upload failed. Check the image and try again.",
+          success: false,
+        });
+      }
+
+      newMedicine.image = uploadedImage.secure_url;
+    }
+
+    await newMedicine.save();
+
+    return res.status(201).json({
+      message: "Medicine added successfully",
+      success: true,
+      medicine: newMedicine,
+    });
+  } catch (error) {
+    console.error("Add medicine error:", error);
+
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res.status(400).json({
+        message: error.message,
+        success: false,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Unable to save medicine. Please verify the details and try again.",
+      success: false,
+    });
+  }
+};
 
 const updateMedicine = async (req, res) => {
   try {
@@ -214,18 +299,8 @@ const getAllMedicines = async (req, res) => {
 
     // Pharmacist can see only their pharmacy medicines
     else if (req.user.role === "pharmacist") {
-      const pharmacy = await Pharmacy.findOne({
-        owner: req.user.userId,
-      });
-
-      if (!pharmacy) {
-        return res.status(404).json({
-          message: "Pharmacy not found",
-        });
-      }
-
       medicines = await Medicine.find({
-        pharmacy: pharmacy._id,
+        pharmacy: req.user._id,
       })
         .populate("category")
         .populate("pharmacy");

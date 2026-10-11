@@ -16,6 +16,8 @@ import Category from "../pages/admin/Category.jsx";
 import CreateCategory from "../component/admin/CreateCategory.jsx";
 import UpdateCategory from "../component/admin/UpdateCategory.jsx";
 import PharmacistRegistrationSubmitted from "../pages/pharmisct/PharmacistRegistrationSubmited.jsx";
+import PharmacyManagement from "../pages/admin/PharmacyManagement.jsx";
+import MedicineManagement from "../pages/admin/MedicineManagement.jsx";
 function AppRoutes() {
   return (
     <Routes>
@@ -32,6 +34,9 @@ function AppRoutes() {
   element={<PharmacistRegistrationSubmitted />}
 />
       <Route path="/admin/Category" element={<Category />} />
+      <Route path="/admin/pharmacies" element={<PharmacyManagement />} />
+      <Route path="/admin/medicines" element={<MedicineManagement />} />
+      <Route path="/admin/medicines/:medicineId/edit" element={<EditMedicine />} />
       <Route path="/admin/Category/create" element={<CreateCategory />} /><Route
   path="/admin/Category/edit/:categoryId"
   element={<UpdateCategory />}
@@ -40,8 +45,6 @@ function AppRoutes() {
       <Route path="/admin/categories" element={<Category />} />
       <Route path="/pharmacist/inventory" element={<Inventory />} />
       <Route path="/pharmacist/products/new" element={<AddMedicine />} />
-      <Route path="/pharmacist/products/new/images" element={<AddMedicine />} />
-      <Route path="/pharmacist/products/edit/:medicineId" element={<EditMedicine />} />
       <Route path="/pharmacist/orders" element={<Orders />} />
       <Route path="/pharmacist/orders/:orderId" element={<OrderDetails />} />
       <Route path="/pharmacist/prescriptions" element={<Prescriptions />} />

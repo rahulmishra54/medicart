@@ -1,723 +1,250 @@
-import React from "react";
-import {
-  PackagePlus,
-  ChevronDown,
-  CalendarDays,
-  FileText,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarDays, FileText, PackagePlus } from "lucide-react";
+import api from "../api/api.js";
+import AddProductImages from "./AddProductImage.jsx";
+
+const initialForm = {
+  name: "",
+  brand: "",
+  category: "",
+  subCategory: "",
+  genericName: "",
+  manufacturer: "",
+  price: "",
+  mrp: "",
+  stockQuantity: "",
+  description: "",
+  dosageForm: "",
+  prescriptionRequired: false,
+  expiryDate: "",
+  featured: false,
+  active: true,
+};
+
+const inputClassName = "mt-1.5 h-11 w-full rounded-lg border border-[#DCE7EC] bg-white px-3 text-sm text-[#17324D] outline-none transition focus:border-[#15966F] focus:ring-2 focus:ring-[#15966F]/10";
+const labelClassName = "block min-w-0 text-sm font-medium text-[#17324D]";
 
 const AddProduct = () => {
+  const [form, setForm] = useState(initialForm);
+  const [categories, setCategories] = useState([]);
+  const [categoryError, setCategoryError] = useState("");
+  const [image, setImage] = useState(null);
+  const [submitError, setSubmitError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      setCategoryError("");
+
+      try {
+        const response = await api.get("/admin/categories");
+        const categoryRecords = response.data?.categories;
+
+        if (!Array.isArray(categoryRecords)) {
+          throw new Error("Unexpected category response");
+        }
+
+        setCategories(categoryRecords);
+      } catch {
+        setCategoryError("Unable to load categories. Please try again.");
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setForm((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitError("");
+    setSuccess("");
+
+    const price = Number(form.price);
+    const mrp = Number(form.mrp);
+    const stockQuantity = Number(form.stockQuantity);
+
+    if (!form.name.trim() || !form.brand.trim() || !form.manufacturer.trim()
+      || !form.description.trim() || !form.category || !form.expiryDate) {
+      setSubmitError("Complete all required product information.");
+      return;
+    }
+
+    if (form.price === "" || form.mrp === "" || form.stockQuantity === ""
+      || !Number.isFinite(price) || price < 0
+      || !Number.isFinite(mrp) || mrp < 0
+      || !Number.isInteger(stockQuantity) || stockQuantity < 0) {
+      setSubmitError("Enter valid non-negative prices and a whole-number stock quantity.");
+      return;
+    }
+
+    if (categories.length === 0) {
+      setSubmitError("Add a category before creating a medicine.");
+      return;
+    }
+
+    const productData = new FormData();
+    Object.entries(form).forEach(([name, value]) => {
+      productData.append(name, String(value));
+    });
+    if (image) productData.append("image", image);
+
+    setSubmitting(true);
+
+    try {
+      const response = await api.post("/medicines/", productData);
+      console.log(response.data)
+      if (!response.data?.medicine) {
+        throw new Error("Unexpected medicine response");
+      }
+
+      setSuccess("Product added successfully.");
+      setForm(initialForm);
+      setImage(null);
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        setSubmitError("Sign in with an approved pharmacist account to add products.");
+      } else {
+        setSubmitError(error.response?.data?.message || "Unable to add product. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#F5FAFC] p-3 sm:p-5 lg:p-7">
-
-      {/* PAGE CONTAINER */}
-      <div className="max-w-6xl mx-auto">
-
-        {/* PAGE HEADER */}
-        <div className="mb-5">
-          <h1 className="text-xl sm:text-2xl font-bold text-[#17324D]">
-            Add New Product
-          </h1>
-
-          <p className="text-xs sm:text-sm text-[#64748B] mt-1">
-            List a new medicine or healthcare product to your store.
-          </p>
+    <form onSubmit={handleSubmit} className="mx-auto max-w-5xl space-y-5">
+      <section className="rounded-xl border border-[#E2EDF1] bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-5 flex items-center gap-3 border-b border-[#EEF3F5] pb-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#E5F6F0] text-[#15966F]">
+            <PackagePlus size={19} />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold text-[#17324D]">Product information</h2>
+            <p className="mt-0.5 text-sm text-[#718096]">Enter the medicine details for your listing.</p>
+          </div>
         </div>
 
-
-        {/* MAIN FORM CARD */}
-        <div className="bg-white border border-[#E2EDF1] rounded-xl shadow-sm overflow-hidden">
-
-          {/* ================= PRODUCT INFORMATION ================= */}
-          <div className="p-4 sm:p-5 lg:p-6">
-
-            {/* SECTION HEADER */}
-            <div className="flex items-center gap-3 mb-5">
-
-              <div className="
-                w-9 h-9
-                rounded-lg
-                bg-[#E5F6F0]
-                flex
-                items-center
-                justify-center
-                shrink-0
-              ">
-                <PackagePlus
-                  size={19}
-                  className="text-[#15966F]"
-                />
-              </div>
-
-              <div>
-                <h2 className="text-sm sm:text-base font-semibold text-[#17324D]">
-                  Product Information
-                </h2>
-
-                <p className="text-[11px] sm:text-xs text-[#64748B]">
-                  Fill in the details of the product you want to add.
-                </p>
-              </div>
-
-            </div>
-
-
-            {/* ================= PRODUCT NAME + BRAND ================= */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* PRODUCT NAME */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Product Name <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="e.g. Paracetamol 500mg"
-                  className="
-                    w-full
-                    h-10
-                    px-3
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    bg-white
-                    text-xs
-                    text-[#17324D]
-                    placeholder:text-[#94A3B8]
-                    outline-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-              </div>
-
-
-              {/* BRAND */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Brand <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="e.g. Crocin"
-                  className="
-                    w-full
-                    h-10
-                    px-3
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    text-xs
-                    text-[#17324D]
-                    placeholder:text-[#94A3B8]
-                    outline-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-              </div>
-
-
-              {/* CATEGORY */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Category <span className="text-red-500">*</span>
-                </label>
-
-                <div className="relative">
-                  <select
-                    className="
-                      appearance-none
-                      w-full
-                      h-10
-                      px-3
-                      pr-9
-                      rounded-lg
-                      border
-                      border-[#DCE7EC]
-                      bg-white
-                      text-xs
-                      text-[#64748B]
-                      outline-none
-                      focus:border-[#15966F]
-                      focus:ring-2
-                      focus:ring-[#15966F]/10
-                    "
-                  >
-                    <option>Select Category</option>
-                    <option>Medicine</option>
-                    <option>Healthcare</option>
-                    <option>Personal Care</option>
-                    <option>Medical Equipment</option>
-                  </select>
-
-                  <ChevronDown
-                    size={16}
-                    className="
-                      absolute
-                      right-3
-                      top-1/2
-                      -translate-y-1/2
-                      text-[#64748B]
-                      pointer-events-none
-                    "
-                  />
-                </div>
-              </div>
-
-
-              {/* SUB CATEGORY */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Sub Category
-                </label>
-
-                <div className="relative">
-                  <select
-                    className="
-                      appearance-none
-                      w-full
-                      h-10
-                      px-3
-                      pr-9
-                      rounded-lg
-                      border
-                      border-[#DCE7EC]
-                      bg-white
-                      text-xs
-                      text-[#64748B]
-                      outline-none
-                      focus:border-[#15966F]
-                      focus:ring-2
-                      focus:ring-[#15966F]/10
-                    "
-                  >
-                    <option>Select Sub Category</option>
-                    <option>Tablets</option>
-                    <option>Capsules</option>
-                    <option>Syrup</option>
-                    <option>Cream</option>
-                  </select>
-
-                  <ChevronDown
-                    size={16}
-                    className="
-                      absolute
-                      right-3
-                      top-1/2
-                      -translate-y-1/2
-                      text-[#64748B]
-                      pointer-events-none
-                    "
-                  />
-                </div>
-              </div>
-
-
-              {/* GENERIC NAME */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Generic Name
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="e.g. Paracetamol"
-                  className="
-                    w-full
-                    h-10
-                    px-3
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    text-xs
-                    text-[#17324D]
-                    placeholder:text-[#94A3B8]
-                    outline-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-              </div>
-
-
-              {/* MANUFACTURER */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Manufacturer
-                </label>
-
-                <input
-                  type="text"
-                  placeholder="e.g. GSK, Sun Pharma"
-                  className="
-                    w-full
-                    h-10
-                    px-3
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    text-xs
-                    text-[#17324D]
-                    placeholder:text-[#94A3B8]
-                    outline-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-              </div>
-
-            </div>
-
-
-            {/* ================= PRICE SECTION ================= */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-
-              {/* PRICE */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Price (₹) <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="number"
-                  placeholder="e.g. 50"
-                  className="
-                    w-full
-                    h-10
-                    px-3
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    text-xs
-                    outline-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-              </div>
-
-
-              {/* MRP */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  MRP (₹)
-                </label>
-
-                <input
-                  type="number"
-                  placeholder="e.g. 60"
-                  className="
-                    w-full
-                    h-10
-                    px-3
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    text-xs
-                    outline-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-              </div>
-
-
-              {/* STOCK */}
-              <div>
-                <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                  Stock Quantity <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="number"
-                  placeholder="e.g. 100"
-                  className="
-                    w-full
-                    h-10
-                    px-3
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    text-xs
-                    outline-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-              </div>
-
-            </div>
-
-
-            {/* ================= DESCRIPTION ================= */}
-            <div className="mt-4">
-
-              <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                Description <span className="text-red-500">*</span>
-              </label>
-
-              <div className="relative">
-
-                <textarea
-                  rows="4"
-                  maxLength="500"
-                  placeholder="Enter product description, uses, benefits, dosage etc..."
-                  className="
-                    w-full
-                    px-3
-                    py-3
-                    pb-7
-                    rounded-lg
-                    border
-                    border-[#DCE7EC]
-                    text-xs
-                    text-[#17324D]
-                    placeholder:text-[#94A3B8]
-                    outline-none
-                    resize-none
-                    focus:border-[#15966F]
-                    focus:ring-2
-                    focus:ring-[#15966F]/10
-                  "
-                />
-
-                <span className="
-                  absolute
-                  bottom-2
-                  right-3
-                  text-[10px]
-                  text-[#94A3B8]
-                ">
-                  0/500
-                </span>
-
-              </div>
-
-            </div>
-
-
-            {/* ================= ADDITIONAL INFORMATION ================= */}
-            <div className="mt-5 pt-5 border-t border-[#EEF3F5]">
-
-              {/* SECTION HEADER */}
-              <div className="flex items-center gap-3 mb-5">
-
-                <div className="
-                  w-9 h-9
-                  rounded-lg
-                  bg-[#EDF7FC]
-                  flex
-                  items-center
-                  justify-center
-                  shrink-0
-                ">
-                  <FileText
-                    size={18}
-                    className="text-[#237DA8]"
-                  />
-                </div>
-
-                <div>
-                  <h2 className="text-sm sm:text-base font-semibold text-[#17324D]">
-                    Additional Information
-                  </h2>
-                </div>
-
-              </div>
-
-
-              {/* DOSAGE / PRESCRIPTION / EXPIRY */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-                {/* DOSAGE FORM */}
-                <div>
-
-                  <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                    Dosage Form
-                  </label>
-
-                  <div className="relative">
-
-                    <select
-                      className="
-                        appearance-none
-                        w-full
-                        h-10
-                        px-3
-                        pr-9
-                        rounded-lg
-                        border
-                        border-[#DCE7EC]
-                        bg-white
-                        text-xs
-                        text-[#64748B]
-                        outline-none
-                        focus:border-[#15966F]
-                        focus:ring-2
-                        focus:ring-[#15966F]/10
-                      "
-                    >
-                      <option>Select Dosage Form</option>
-                      <option>Tablet</option>
-                      <option>Capsule</option>
-                      <option>Syrup</option>
-                      <option>Cream</option>
-                      <option>Injection</option>
-                    </select>
-
-                    <ChevronDown
-                      size={16}
-                      className="
-                        absolute
-                        right-3
-                        top-1/2
-                        -translate-y-1/2
-                        text-[#64748B]
-                        pointer-events-none
-                      "
-                    />
-
-                  </div>
-
-                </div>
-
-
-                {/* PRESCRIPTION */}
-                <div>
-
-                  <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                    Prescription Required
-                  </label>
-
-                  <div className="relative">
-
-                    <select
-                      className="
-                        appearance-none
-                        w-full
-                        h-10
-                        px-3
-                        pr-9
-                        rounded-lg
-                        border
-                        border-[#DCE7EC]
-                        bg-white
-                        text-xs
-                        text-[#64748B]
-                        outline-none
-                        focus:border-[#15966F]
-                        focus:ring-2
-                        focus:ring-[#15966F]/10
-                      "
-                    >
-                      <option>No</option>
-                      <option>Yes</option>
-                    </select>
-
-                    <ChevronDown
-                      size={16}
-                      className="
-                        absolute
-                        right-3
-                        top-1/2
-                        -translate-y-1/2
-                        text-[#64748B]
-                        pointer-events-none
-                      "
-                    />
-
-                  </div>
-
-                </div>
-
-
-                {/* EXPIRY DATE */}
-                <div>
-
-                  <label className="block text-xs font-medium text-[#17324D] mb-1.5">
-                    Expiry Date
-                  </label>
-
-                  <div className="relative">
-
-                    <input
-                      type="text"
-                      placeholder="dd/mm/yyyy"
-                      className="
-                        w-full
-                        h-10
-                        px-3
-                        pr-10
-                        rounded-lg
-                        border
-                        border-[#DCE7EC]
-                        text-xs
-                        text-[#17324D]
-                        placeholder:text-[#94A3B8]
-                        outline-none
-                        focus:border-[#15966F]
-                        focus:ring-2
-                        focus:ring-[#15966F]/10
-                      "
-                    />
-
-                    <CalendarDays
-                      size={16}
-                      className="
-                        absolute
-                        right-3
-                        top-1/2
-                        -translate-y-1/2
-                        text-[#64748B]
-                      "
-                    />
-
-                  </div>
-
-                </div>
-
-              </div>
-
-
-              {/* ================= CHECKBOXES ================= */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-
-                {/* FEATURED */}
-                <label className="flex items-start gap-2 cursor-pointer">
-
-                  <input
-                    type="checkbox"
-                    className="
-                      mt-0.5
-                      w-4
-                      h-4
-                      accent-[#15966F]
-                    "
-                  />
-
-                  <div className="flex flex-col">
-
-                    <span className="text-xs font-medium text-[#17324D]">
-                      Featured Product
-                    </span>
-
-                    <span className="text-[10px] sm:text-xs text-[#718096] mt-0.5">
-                      Show this product in featured section
-                    </span>
-
-                  </div>
-
-                </label>
-
-
-                {/* ACTIVE */}
-                <label className="flex items-start gap-2 cursor-pointer">
-
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="
-                      mt-0.5
-                      w-4
-                      h-4
-                      accent-[#15966F]
-                    "
-                  />
-
-                  <div className="flex flex-col">
-
-                    <span className="text-xs font-medium text-[#17324D]">
-                      Active
-                    </span>
-
-                    <span className="text-[10px] sm:text-xs text-[#718096] mt-0.5">
-                      Make this product visible on store
-                    </span>
-
-                  </div>
-
-                </label>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* ================= FORM ACTIONS ================= */}
-          <div className="
-            border-t
-            border-[#EEF3F5]
-            bg-[#FBFDFE]
-            px-4
-            sm:px-5
-            lg:px-6
-            py-4
-            flex
-            flex-col-reverse
-            sm:flex-row
-            sm:justify-end
-            gap-3
-          ">
-
-            <button
-              type="button"
-              className="
-                w-full
-                sm:w-auto
-                h-10
-                px-5
-                rounded-lg
-                border
-                border-[#DCE7EC]
-                text-sm
-                font-medium
-                text-[#64748B]
-                hover:bg-white
-                transition
-              "
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              className="
-                w-full
-                sm:w-auto
-                h-10
-                px-6
-                rounded-lg
-                bg-[#15966F]
-                text-white
-                text-sm
-                font-medium
-                hover:bg-[#117F5E]
-                transition
-                shadow-sm
-              "
-            >
-              Add Product
-            </button>
-
-          </div>
-
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <label className={labelClassName}>
+            Product name *
+            <input name="name" value={form.name} onChange={handleChange} required maxLength={150} placeholder="e.g. Paracetamol 500 mg" className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            Brand *
+            <input name="brand" value={form.brand} onChange={handleChange} required placeholder="e.g. Crocin" className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            Category *
+            <select name="category" value={form.category} onChange={handleChange} required disabled={loadingCategories || categories.length === 0} className={`${inputClassName} disabled:bg-slate-50`}>
+              <option value="">{loadingCategories ? "Loading categories..." : "Select category"}</option>
+              {categories.map((category) => (
+                <option key={category._id} value={category._id}>{category.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className={labelClassName}>
+            Subcategory
+            <input name="subCategory" value={form.subCategory} onChange={handleChange} placeholder="Optional" className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            Generic name
+            <input name="genericName" value={form.genericName} onChange={handleChange} placeholder="e.g. Paracetamol" className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            Manufacturer *
+            <input name="manufacturer" value={form.manufacturer} onChange={handleChange} required placeholder="Manufacturer name" className={inputClassName} />
+          </label>
+        </div>
+        {categoryError && <p role="alert" className="mt-3 text-sm text-red-700">{categoryError}</p>}
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <label className={labelClassName}>
+            Price (₹) *
+            <input name="price" type="number" min="0" step="0.01" value={form.price} onChange={handleChange} required className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            MRP (₹) *
+            <input name="mrp" type="number" min="0" step="0.01" value={form.mrp} onChange={handleChange} required className={inputClassName} />
+          </label>
+          <label className={labelClassName}>
+            Stock quantity *
+            <input name="stockQuantity" type="number" min="0" step="1" value={form.stockQuantity} onChange={handleChange} required className={inputClassName} />
+          </label>
         </div>
 
+        <label className={`${labelClassName} mt-5`}>
+          Description *
+          <textarea name="description" value={form.description} onChange={handleChange} required maxLength={500} rows={4} placeholder="Describe the medicine" className="mt-1.5 w-full resize-y rounded-lg border border-[#DCE7EC] p-3 text-sm text-[#17324D] outline-none focus:border-[#15966F] focus:ring-2 focus:ring-[#15966F]/10" />
+        </label>
+      </section>
+
+      <section className="rounded-xl border border-[#E2EDF1] bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-5 flex items-center gap-3 border-b border-[#EEF3F5] pb-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EDF7FC] text-[#237DA8]">
+            <FileText size={19} />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold text-[#17324D]">Additional information</h2>
+            <p className="mt-0.5 text-sm text-[#718096]">Set dosage, expiry, and product visibility.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <label className={labelClassName}>
+            Dosage form
+            <select name="dosageForm" value={form.dosageForm} onChange={handleChange} className={inputClassName}>
+              <option value="">Not specified</option>
+              {["Tablet", "Capsule", "Syrup", "Injection", "Cream", "Ointment", "Drops", "Powder", "Other"].map((dosageForm) => (
+                <option key={dosageForm} value={dosageForm}>{dosageForm}</option>
+              ))}
+            </select>
+          </label>
+          <label className={labelClassName}>
+            Expiry date *
+            <span className="relative block">
+              <input name="expiryDate" type="date" value={form.expiryDate} onChange={handleChange} required className={inputClassName} />
+              <CalendarDays size={17} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#718096]" />
+            </span>
+          </label>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 border-t border-[#EEF3F5] pt-4">
+          {[
+            ["prescriptionRequired", "Prescription required"],
+            ["featured", "Featured product"],
+            ["active", "Active"],
+          ].map(([name, label]) => (
+            <label key={name} className="inline-flex items-center gap-2 text-sm font-medium text-[#475569]">
+              <input name={name} type="checkbox" checked={form[name]} onChange={handleChange} className="h-4 w-4 accent-[#15966F]" />
+              {label}
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <AddProductImages image={image} onImageChange={setImage} disabled={submitting} />
+
+      {submitError && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{submitError}</p>}
+      {success && <p role="status" className="rounded-lg bg-[#E5F6F0] px-4 py-3 text-sm text-[#117F5E]">{success}</p>}
+
+      <div className="flex justify-end border-t border-[#DCE7EC] pt-4">
+        <button type="submit" disabled={submitting || loadingCategories || Boolean(categoryError) || categories.length === 0} className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[#15966F] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#117F5E] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+          {submitting ? "Adding product..." : "Add Product"}
+        </button>
       </div>
-
-    </div>
+    </form>
   );
 };
 

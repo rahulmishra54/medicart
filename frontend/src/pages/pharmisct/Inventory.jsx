@@ -1,37 +1,95 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import InventoryFilter from "../../component/InventoryFilter.jsx";
 import InventoryHeader from "../../component/InventoryHeader.jsx";
-import InventoryStats from "../../component/InventoryStats.jsx";
 import InventoryTable from "../../component/InventoryTable.jsx";
-import UpdateStockModel from "../../component/UpdateStockModel.jsx";
+import InventoryStats from "../../component/InventoryStats.jsx";
 import PharmacistLayout from "./PharmacistLayout.jsx";
-import logo from "../../assets/logo.png";
-
-const initialProducts = [
-  { id: "med-1", name: "Paracetamol 500 mg", brand: "Crocin", category: "Pain Relief", price: 32, stock: 48, lastUpdated: "Today", image: logo },
-  { id: "med-2", name: "Azithromycin 500 mg", brand: "Azithral", category: "Antibiotic", price: 96, stock: 7, lastUpdated: "Yesterday", image: logo },
-  { id: "med-3", name: "Vitamin D3 60,000 IU", brand: "Uprise-D3", category: "Supplements", price: 115, stock: 0, lastUpdated: "28 Sep 2026", image: logo },
-  { id: "med-4", name: "Cetirizine 10 mg", brand: "Cetzine", category: "Allergy Care", price: 24, stock: 26, lastUpdated: "02 Oct 2026", image: logo },
-];
+import api from "../../api/api.js";
+import UpdateStockModel from "../../component/UpdateStockModel.jsx";
 
 const Inventory = () => {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
+  const [stats, setStats] = useState({
+    totalMedicines: 0,
+    inStockMedicines: 0,
+    lowStockMedicines: 0,
+    outOfStockMedicines: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const filteredProducts = useMemo(
-    () => products.filter((product) => {
-      if (activeFilter === "In Stock") return product.stock > 10;
-      if (activeFilter === "Low Stock") return product.stock > 0 && product.stock <= 10;
-      if (activeFilter === "Out of Stock") return product.stock === 0;
-      return true;
-    }),
-    [activeFilter, products],
-  );
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        const inventoryResponse = await api.get("/inventory");
+        const medicines = inventoryResponse.data.medicines;
 
-  const updateStock = (updatedProduct) => {
-    setProducts((current) => current.map((product) => product.id === updatedProduct.id ? updatedProduct : product));
+        if (!inventoryResponse.data.success || !Array.isArray(medicines)) {
+          throw new Error("Inventory data is not available.");
+        }
+
+        const inventoryProducts = medicines.map((medicine) => ({
+          ...medicine,
+          id: medicine._id,
+          stock: medicine.stockQuantity,
+          category: medicine.category?.name || medicine.category,
+          lastUpdated: medicine.updatedAt,
+        }));
+        setProducts(inventoryProducts);
+
+        const statsResponse = await api.get("/inventory/stats");
+        if (statsResponse.data.success && statsResponse.data.data) {
+          setStats(statsResponse.data.data);
+        }
+      } catch (requestError) {
+        setError(requestError.response?.data?.message || requestError.message || "Unable to load inventory.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInventory();
+  }, []);
+
+  const filteredProducts = products.filter((product) => {
+    if (activeFilter === "In Stock") return product.stock > 10;
+    if (activeFilter === "Low Stock") return product.stock > 0 && product.stock <= 10;
+    if (activeFilter === "Out of Stock") return product.stock === 0;
+    return true;
+  });
+
+  const updateStock = async (updatedProduct) => {
+    try {
+      const response = await api.patch(`/inventory/${updatedProduct._id}/stock`, {
+        stockQuantity: updatedProduct.stock,
+      });
+
+      if (!response.data.success || !response.data.medicine) {
+        throw new Error(response.data.message || "Unable to update stock.");
+      }
+
+      const updatedMedicine = response.data.medicine;
+      setProducts((currentProducts) => currentProducts.map((product) => (
+        product._id === updatedMedicine._id
+          ? {
+            ...product,
+            stock: updatedMedicine.stockQuantity,
+            lastUpdated: updatedMedicine.updatedAt,
+          }
+          : product
+      )));
+
+      const statsResponse = await api.get("/inventory/stats");
+      if (statsResponse.data.success && statsResponse.data.data) {
+        setStats(statsResponse.data.data);
+      }
+      setError("");
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || requestError.message || "Unable to update stock.");
+    }
   };
 
   return (
@@ -41,8 +99,9 @@ const Inventory = () => {
           <InventoryHeader />
           <Link to="/pharmacist/products/new" className="inline-flex h-10 items-center justify-center rounded-lg bg-[#15966F] px-4 text-sm font-semibold text-white hover:bg-[#117F5E]">Add medicine</Link>
         </div>
-        <InventoryStats />
-        <InventoryFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} />
+        <InventoryFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} stats={stats}/>
+        {loading && <p className="text-sm text-slate-500">Loading inventory...</p>}
+        <InventoryStats stats={stats} />
         <InventoryTable products={filteredProducts} onUpdate={setSelectedProduct} />
       </div>
       {selectedProduct && (

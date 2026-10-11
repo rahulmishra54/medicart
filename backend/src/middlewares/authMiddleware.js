@@ -1,13 +1,11 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import Pharmacy from "../models/pharmacy.model.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
-    console.log(req.body)
-    console.log(req.cookies)
-    
+    console.log(req.cookies);
     const accessToken =  req.cookies.token;
-    console.log(accessToken)
 
     if (!accessToken) {
       return res.status(401).json({
@@ -20,8 +18,23 @@ const authMiddleware = async (req, res, next) => {
       accessToken,
       process.env.JWT_SECRET
     );
+    if (decoded.role === "pharmacist") {
+      const pharmacist = await Pharmacy.findById(decoded.userId).select("-password");
 
-    // Find user
+      if (!pharmacist) {
+        return res.status(401).json({
+          message: "Pharmacy account not found",
+        });
+      }
+
+      req.user = {
+        ...pharmacist.toObject(),
+        role: "pharmacist",
+      };
+
+      return next();
+    }
+
     const user = await User.findById(decoded.userId).select("-password");
 
     if (!user) {

@@ -1,16 +1,67 @@
-import { Plus } from "lucide-react";
+import { CheckCircle2, FolderTree, Package, Plus, XCircle } from "lucide-react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import AdminSidebar from "../../component/admin/AdminSidebar.jsx";
 import CategoryFilter from "../../component/admin/CategoryFilter.jsx";
 import CategoryStats from "../../component/admin/CategoryStats.jsx";
 import CategoryTable from "../../component/admin/CategoryTable.jsx";
 import PharmistNavBar from "../../component/PharmistNavBar.jsx";
-
-import {useNavigate} from "react-router-dom";
+import { getCategoryStats } from "../../redux/category.js";
+import api from "../../api/api.js";
+import { useNavigate } from "react-router-dom";
 
 
 
 const Category = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const categories = useSelector((state) => state.category.categories);
+  const categoryStats = useSelector((state) => state.category.categoryStats);
+
+  useEffect(() => {
+    const fetchCategoryStats = async () => {
+      try {
+        const response = await api.get("/admin/categories/stats");
+        dispatch(getCategoryStats(response.data.stats));
+      } catch (error) {
+        console.error("Failed to fetch category statistics:", error);
+      }
+    };
+
+    fetchCategoryStats();
+  }, [dispatch]);
+
+  const stats = [
+    {
+      title: "Total Categories",
+      value: categories.length,
+      icon: FolderTree,
+      color: "text-[#237DA8]",
+      bg: "bg-[#EDF7FC]",
+    },
+    {
+      title: "Active Categories",
+      value: categories.filter((category) => category.active).length,
+      icon: CheckCircle2,
+      color: "text-[#15966F]",
+      bg: "bg-[#E5F6F0]",
+    },
+    {
+      title: "Inactive Categories",
+      value: categories.filter((category) => !category.active).length,
+      icon: XCircle,
+      color: "text-[#D97706]",
+      bg: "bg-amber-50",
+    },
+    {
+      title: "Products Across Categories",
+      value: categoryStats?.productsAcrossCategories || 0,
+      icon: Package,
+      color: "text-[#64748B]",
+      bg: "bg-slate-100",
+    },
+  ];
+
   return (
     <div className="w-full bg-[#F5FAFC]">
 
@@ -55,7 +106,7 @@ const Category = () => {
             </header>
 
             {/* Stats */}
-            <CategoryStats  />
+            <CategoryStats stats={stats} />
 
             {/* Filter UI */}
             <CategoryFilter />

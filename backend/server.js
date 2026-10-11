@@ -1,5 +1,4 @@
-import dotenv from "dotenv"
-dotenv.config()
+import "dotenv/config";
 import connectDb from "./src/config/db.js"
 import app from "./src/index.js"
 import cors from "cors"
