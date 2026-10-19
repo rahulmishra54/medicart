@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Medicine from "../models/medicine.model.js";
 import { uploadImage } from "../services/cloudinary.js";
 
@@ -285,13 +286,59 @@ const searchMedicines = async(req,res)=>{
     }
 }
 
+const getCatalogMedicines = async (req, res) => {
+  try {
+    const { query, category, sort, discounted } = req.query;
+    const filter = { active: true, expiryDate: { $gt: new Date() } };
+
+    if (category) {
+      if (!mongoose.isValidObjectId(category)) {
+        return res.status(400).json({ message: "Invalid category ID", success: false });
+      }
+      filter.category = category;
+    }
+
+    if (query?.trim()) {
+      const safeQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.$or = [
+        { name: { $regex: safeQuery, $options: "i" } },
+        { brand: { $regex: safeQuery, $options: "i" } },
+        { genericName: { $regex: safeQuery, $options: "i" } },
+      ];
+    }
+
+    if (discounted === "true") {
+      filter.$expr = { $gt: ["$mrp", "$price"] };
+    }
+
+    const sortOptions = {
+      "price-asc": { price: 1 },
+      "price-desc": { price: -1 },
+      name: { name: 1 },
+    };
+    const medicines = await Medicine.find(filter)
+      .populate("category", "name")
+      .sort(sortOptions[sort] || { name: 1 });
+
+    return res.status(200).json({
+      message: "Medicines fetched successfully",
+      success: true,
+      count: medicines.length,
+      medicines,
+    });
+  } catch (error) {
+    console.error("Get catalog medicines error:", error);
+    return res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
 
 const getAllMedicines = async (req, res) => {
   try {
     let medicines;
 
     // Admin can see all medicines
-    if (req.user.role === "admin") {
+    if (req.user.role === "admin" ) {
       medicines = await Medicine.find()
         .populate("category")
         .populate("pharmacy");
@@ -305,12 +352,9 @@ const getAllMedicines = async (req, res) => {
         .populate("category")
         .populate("pharmacy");
     }
+ 
 
-    else {
-      return res.status(403).json({
-        message: "Access denied",
-      });
-    }
+    console.log(medicines.length)
 
     return res.status(200).json({
       message: "Medicines fetched successfully",
@@ -327,7 +371,31 @@ const getAllMedicines = async (req, res) => {
   }
 };
 
+const getAllMedicine = async (req,res)=>{
+  try{
+    const medicines = await Medicine.find()
+    .populate("category").populate("pharmacy");
+
+    console.log("[medicines] response", {
+      url: req.originalUrl,
+      status: 200,
+      data: { message: "Medicines fetched successfully", count: medicines.length, medicines },
+    });
+    return res.status(200).json({
+      message : "Medicines fetched successfully",
+      count : medicines.length,
+      medicines
+    })
+  }catch(error){
+    console.error("[medicines] request failed", {
+      url: req.originalUrl,
+      status: null,
+      error: error.message,
+    });
+  }
+}
 
 
-export{addMedicine, updateMedicine,getMedicineById,deleteMedicine,searchMedicines,getAllMedicines};
+
+export{getAllMedicine, addMedicine, updateMedicine,getMedicineById,deleteMedicine,searchMedicines,getAllMedicines,getCatalogMedicines};
 

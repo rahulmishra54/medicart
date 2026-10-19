@@ -10,12 +10,7 @@ import UpdateStockModel from "../../component/UpdateStockModel.jsx";
 
 const Inventory = () => {
   const [products, setProducts] = useState([]);
-  const [stats, setStats] = useState({
-    totalMedicines: 0,
-    inStockMedicines: 0,
-    lowStockMedicines: 0,
-    outOfStockMedicines: 0,
-  });
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -43,6 +38,8 @@ const Inventory = () => {
         const statsResponse = await api.get("/inventory/stats");
         if (statsResponse.data.success && statsResponse.data.data) {
           setStats(statsResponse.data.data);
+        } else {
+          throw new Error(statsResponse.data.message || "Inventory statistics are not available.");
         }
       } catch (requestError) {
         setError(requestError.response?.data?.message || requestError.message || "Unable to load inventory.");
@@ -85,6 +82,8 @@ const Inventory = () => {
       const statsResponse = await api.get("/inventory/stats");
       if (statsResponse.data.success && statsResponse.data.data) {
         setStats(statsResponse.data.data);
+      } else {
+        throw new Error(statsResponse.data.message || "Inventory statistics are not available.");
       }
       setError("");
     } catch (requestError) {
@@ -99,10 +98,11 @@ const Inventory = () => {
           <InventoryHeader />
           <Link to="/pharmacist/products/new" className="inline-flex h-10 items-center justify-center rounded-lg bg-[#15966F] px-4 text-sm font-semibold text-white hover:bg-[#117F5E]">Add medicine</Link>
         </div>
-        <InventoryFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} stats={stats}/>
+        {stats && <InventoryFilter activeFilter={activeFilter} setActiveFilter={setActiveFilter} stats={stats} />}
         {loading && <p className="text-sm text-slate-500">Loading inventory...</p>}
-        <InventoryStats stats={stats} />
-        <InventoryTable products={filteredProducts} onUpdate={setSelectedProduct} />
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+        {stats && <InventoryStats stats={stats} />}
+        {!loading && !error && <InventoryTable products={filteredProducts} onUpdate={setSelectedProduct} />}
       </div>
       {selectedProduct && (
         <UpdateStockModel

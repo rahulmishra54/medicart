@@ -95,6 +95,20 @@ const AdminSidebar = () => {
         >
           Pharmacies
         </NavLink>
+
+        <NavLink
+          to="/admin/users"
+          onClick={() => setMenuOpen(false)}
+          className={({ isActive }) =>
+            `rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+              isActive
+                ? "bg-[#E5F6F0] text-[#117F5E]"
+                : "text-[#64748B] hover:bg-[#F6FAFC] hover:text-[#17324D]"
+            }`
+          }
+        >
+          Users
+        </NavLink>
       </nav>
     </aside>
   );

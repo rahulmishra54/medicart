@@ -3,36 +3,30 @@ import CartItem from "../models/cartItem.model.js";
 
 async function getMyCart(req, res) {
   try {
-    const userId = req.user;
-
-    if (!userId) {
+    if (req.user?.role !== "user") {
       return res.status(401).json({
-        message: "User not found",
+        message: "Customer login is required",
         success: false,
       });
     }
 
-  
-    const cart = await Cart.findOne({
-      user: userId,
-    });
+    const cart = await Cart.findOne({ user: req.user._id });
 
     if (!cart) {
       return res.status(200).json({
         message: "Cart is empty",
         success: true,
+        cartId: null,
         cartItems: [],
       });
     }
 
-    
-    const cartItems = await CartItem.find({
-      cart: cart._id,
-    }).populate("medicine");
+    const cartItems = await CartItem.find({ cart: cart._id }).populate("medicine");
 
     return res.status(200).json({
       message: "Cart items retrieved successfully",
       success: true,
+      cartId: cart._id,
       cartItems,
     });
 
@@ -49,6 +43,10 @@ async function getMyCart(req, res) {
 
 async function clearCart(req, res) {
   try {
+    if (req.user?.role !== "user") {
+      return res.status(403).json({ message: "Customer login is required", success: false });
+    }
+
     const { cartId } = req.params;
 
     if (!cartId) {
@@ -59,7 +57,7 @@ async function clearCart(req, res) {
     }
 
     // Find cart
-    const cart = await Cart.findById(cartId);
+    const cart = await Cart.findOne({ _id: cartId, user: req.user._id });
 
     if (!cart) {
       return res.status(404).json({
@@ -68,7 +66,6 @@ async function clearCart(req, res) {
       });
     }
 
-    
     await CartItem.deleteMany({
       cart: cartId,
     });

@@ -1,13 +1,8 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import PharmacistLayout from "./PharmacistLayout.jsx";
-
-const orders = [
-  { id: "MC-2048", customer: "Aarav Sharma", date: "05 Oct 2026, 10:42 AM", items: 3, total: "₹842", status: "Processing" },
-  { id: "MC-2047", customer: "Meera Patel", date: "05 Oct 2026, 09:18 AM", items: 5, total: "₹1,260", status: "Ready to ship" },
-  { id: "MC-2046", customer: "Kabir Singh", date: "04 Oct 2026, 04:36 PM", items: 2, total: "₹395", status: "Delivered" },
-  { id: "MC-2045", customer: "Diya Verma", date: "04 Oct 2026, 01:05 PM", items: 4, total: "₹718", status: "Cancelled" },
-];
+import api from "../../api/api.js";
 
 const statusStyle = {
   Processing: "bg-amber-50 text-amber-700",
@@ -17,22 +12,125 @@ const statusStyle = {
 };
 
 const Orders = () => {
-  const [filter, setFilter] = useState("All orders");
-  const visibleOrders = filter === "All orders" ? orders : orders.filter((order) => order.status === filter);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchOrders = async () => {
+      try {
+        const response = await api.get("/orders/");
+        if (!response.data.success || !Array.isArray(response.data.orders)) {
+          throw new Error(response.data.message || "Orders are not available.");
+        }
+        if (isMounted){
+          console.log(response)
+           setOrders(response.data.orders);
+        }
+      } catch (error) {
+        if (isMounted) setError(error.response?.data?.message || error.message || "Unable to load orders.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchOrders();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const currency = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  });
 
   return (
     <PharmacistLayout>
       <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
         <header className="flex flex-wrap items-end justify-between gap-4">
-          <div><p className="text-sm text-[#64748B]">Pharmacy operations</p><h1 className="mt-1 text-2xl font-bold text-[#17324D] sm:text-3xl">Orders</h1><p className="mt-1 text-sm text-[#718096]">Review and fulfill customer orders.</p></div>
-          <label className="text-sm font-medium text-[#475569]">Status<select value={filter} onChange={(event) => setFilter(event.target.value)} className="ml-2 h-10 rounded-lg border border-[#DCE7EC] bg-white px-3 text-sm"><option>All orders</option><option>Processing</option><option>Ready to ship</option><option>Delivered</option><option>Cancelled</option></select></label>
+          <div>
+            <p className="text-sm text-[#64748B]">Pharmacy operations</p>
+            <h1 className="mt-1 text-2xl font-bold text-[#17324D] sm:text-3xl">
+              Orders
+            </h1>
+            <p className="mt-1 text-sm text-[#718096]">
+              Review and fulfill customer orders.
+            </p>
+          </div>
+
+          <label className="text-sm font-medium text-[#475569]">
+            Status
+            <select
+              className="ml-2 h-10 rounded-lg border border-[#DCE7EC] bg-white px-3 text-sm"
+            >
+              <option>All orders</option>
+              <option>Processing</option>
+              <option>Ready to ship</option>
+              <option>Delivered</option>
+              <option>Cancelled</option>
+            </select>
+          </label>
         </header>
+
         <div className="overflow-x-auto rounded-xl border border-[#E2EDF1] bg-white">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-[#F8FBFC] text-xs uppercase text-[#718096]"><tr><th className="px-5 py-4 font-semibold">Order</th><th className="px-5 py-4 font-semibold">Customer</th><th className="px-5 py-4 font-semibold">Placed</th><th className="px-5 py-4 font-semibold">Items</th><th className="px-5 py-4 font-semibold">Total</th><th className="px-5 py-4 font-semibold">Status</th><th className="px-5 py-4" /></tr></thead>
-            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-[#EEF3F5] text-[#475569]"><td className="px-5 py-4 font-semibold text-[#17324D]">{order.id}</td><td className="px-5 py-4">{order.customer}</td><td className="px-5 py-4">{order.date}</td><td className="px-5 py-4">{order.items}</td><td className="px-5 py-4 font-medium">{order.total}</td><td className="px-5 py-4"><span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${statusStyle[order.status]}`}>{order.status}</span></td><td className="px-5 py-4"><Link to={`/pharmacist/orders/${order.id}`} className="font-semibold text-[#15966F] hover:underline">Details</Link></td></tr>)}</tbody>
+            <thead className="bg-[#F8FBFC] text-xs uppercase text-[#718096]">
+              <tr>
+                <th className="px-5 py-4 font-semibold">Order</th>
+                <th className="px-5 py-4 font-semibold">Customer</th>
+                <th className="px-5 py-4 font-semibold">Placed</th>
+                <th className="px-5 py-4 font-semibold">Items</th>
+                <th className="px-5 py-4 font-semibold">Total</th>
+                <th className="px-5 py-4 font-semibold">Status</th>
+                <th className="px-5 py-4" />
+              </tr>
+            </thead>
+
+            <tbody>
+              {orders.map((order) => (
+                <tr
+                  key={order._id}
+                  className="border-t border-[#EEF3F5] text-[#475569]"
+                >
+                  <td className="px-5 py-4 font-semibold text-[#17324D]">{order._id}</td>
+                  <td className="px-5 py-4">{order.user?.name || "Customer"}</td>
+                  <td className="px-5 py-4">{order.orderDate ? new Date(order.orderDate).toLocaleString("en-IN") : "—"}</td>
+                  <td className="px-5 py-4">{order.items?.length ?? "—"}</td>
+                  <td className="px-5 py-4 font-medium">
+                    {currency.format(order.totalAmount || 0)}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span
+                      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${
+                        statusStyle[order.status] || statusStyle[order.status?.[0]?.toUpperCase() + order.status?.slice(1)] || ""
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <Link
+                      to={`/pharmacist/orders/${order._id}`}
+                      className="font-semibold text-[#15966F] hover:underline"
+                    >
+                      Details
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
           </table>
-          {visibleOrders.length === 0 && <p className="p-8 text-center text-sm text-[#718096]">No orders match this status.</p>}
+
+          {loading && <p className="p-8 text-center text-sm text-[#718096]">Loading orders...</p>}
+          {error && <p role="alert" className="p-8 text-center text-sm text-red-700">Unable to load orders: {error}</p>}
+          {!loading && !error && orders.length === 0 && (
+            <p className="p-8 text-center text-sm text-[#718096]">
+              No orders found.
+            </p>
+          )}
         </div>
       </div>
     </PharmacistLayout>

@@ -1,337 +1,114 @@
-import {
-  X,
-  Copy,
-  UserRound,
-  ClipboardList,
-  MessageSquare,
-  Check,
-  XCircle,
-} from "lucide-react";
-
-import logo from "../assets/logo.png";
+import { useEffect, useState } from "react";
+import { Check, ClipboardList, MessageSquare, UserRound, XCircle } from "lucide-react";
+import { useParams } from "react-router-dom";
+import api from "../api/api.js";
 
 const PrescriptionDetails = () => {
+  const { prescriptionId } = useParams();
+  const [prescription, setPrescription] = useState(null);
+  const [order, setOrder] = useState(null);
+  const [remarks, setRemarks] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPrescription = async () => {
+      try {
+        const response = await api.get(`/prescriptions/${prescriptionId}`);
+        if (!response.data.success || !response.data.prescription || !response.data.order) {
+          throw new Error(response.data.message || "Prescription details are not available.");
+        }
+        if (isMounted) {
+          setPrescription(response.data.prescription);
+          setOrder(response.data.order);
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(requestError.response?.data?.message || requestError.message || "Unable to load prescription.");
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchPrescription();
+    return () => {
+      isMounted = false;
+    };
+  }, [prescriptionId]);
+
+  const reviewPrescription = async (action) => {
+    try {
+      setSaving(true);
+      setError("");
+      setMessage("");
+      const response = await api.patch(`/prescriptions/${prescriptionId}/${action}`, { remarks });
+      if (!response.data.success || !response.data.prescription) {
+        throw new Error(response.data.message || "Unable to update prescription review.");
+      }
+      setPrescription(response.data.prescription);
+      setMessage(action === "approve" ? "Prescription approved." : "Prescription rejected.");
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || requestError.message || "Unable to update prescription review.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <p className="p-6 text-sm text-slate-500">Loading prescription...</p>;
+  if (error && !prescription) return <p role="alert" className="p-6 text-sm text-red-700">{error}</p>;
+
+  const images = Array.isArray(prescription?.imageUrl)
+    ? prescription.imageUrl
+    : prescription?.imageUrl
+      ? [prescription.imageUrl]
+      : [];
+
   return (
-    <div className="w-full max-w-[900px] max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 lg:p-8">
+    <div className="w-full max-w-[900px] rounded-xl border border-[#E2EDF1] bg-white p-4 sm:p-6 lg:p-8">
+      <h2 className="text-2xl font-bold text-[#17324D]">Prescription details</h2>
 
-      {/* ================= HEADER ================= */}
-      <div className="flex items-center justify-between gap-4">
+      {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+      {message && <p role="status" className="mt-4 text-sm text-emerald-700">{message}</p>}
 
-        <h2 className="min-w-0 text-2xl font-bold text-gray-900 sm:text-3xl">
-          Prescription Details
-        </h2>
+      <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div><dt className="text-sm text-slate-500">Order ID</dt><dd className="mt-1 break-all font-semibold text-slate-900">{order?._id}</dd></div>
+        <div><dt className="text-sm text-slate-500">Prescription ID</dt><dd className="mt-1 break-all font-semibold text-slate-900">{prescription?._id}</dd></div>
+        <div><dt className="text-sm text-slate-500">Received</dt><dd className="mt-1 font-semibold text-slate-900">{order?.orderDate ? new Date(order.orderDate).toLocaleString("en-IN") : "—"}</dd></div>
+        <div><dt className="text-sm text-slate-500">Review status</dt><dd className="mt-1 font-semibold capitalize text-slate-900">{prescription?.status || "pending"}</dd></div>
+      </dl>
 
-        <button
-          className="shrink-0 rounded-lg p-1 text-gray-700 transition hover:bg-gray-100"
-          aria-label="Close"
-        >
-          <X size={28} />
-        </button>
-
-      </div>
-
-
-      {/* ================= PRESCRIPTION INFORMATION ================= */}
-      <div className="mt-6 space-y-5">
-
-        {/* Order ID */}
-        <div className="grid grid-cols-[110px_minmax(0,1fr)_28px] items-center gap-3 sm:grid-cols-[150px_minmax(0,1fr)_28px]">
-
-          <span className="text-sm text-gray-800 sm:text-base">
-            Order ID
-          </span>
-
-          <strong className="min-w-0 break-words text-sm font-bold text-gray-900 sm:text-base">
-            #MC1024
-          </strong>
-
-          <button className="shrink-0 text-gray-800 hover:text-blue-600">
-            <Copy size={24} />
-          </button>
-
-        </div>
-
-
-        {/* Prescription ID */}
-        <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
-
-          <span className="text-sm text-gray-800 sm:text-base">
-            Prescription ID
-          </span>
-
-          <strong className="min-w-0 break-words text-sm font-bold text-gray-900 sm:text-base">
-            PR-1024
-          </strong>
-
-        </div>
-
-
-        {/* Date */}
-        <div className="grid grid-cols-[110px_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
-
-          <span className="text-sm text-gray-800 sm:text-base">
-            Date
-          </span>
-
-          <strong className="min-w-0 break-words text-sm font-bold text-gray-900 sm:text-base">
-            28 Sep 2026, 10:30 AM
-          </strong>
-
-        </div>
-
-
-        {/* Status */}
-        <div className="flex justify-end">
-
-          <span className="rounded-full bg-pink-100 px-5 py-2 text-sm font-medium text-pink-600">
-            Pending
-          </span>
-
-        </div>
-
-      </div>
-
-
-      {/* ================= CUSTOMER INFORMATION ================= */}
-      <section className="mt-6 rounded-2xl bg-[#F0FBF7] px-4 py-5 sm:px-5">
-
-        {/* Heading */}
-        <div className="mb-5 flex items-center gap-3">
-
-          <UserRound
-            size={23}
-            className="shrink-0 text-gray-900"
-          />
-
-          <h3 className="text-xl font-bold text-gray-900">
-            Customer Information
-          </h3>
-
-        </div>
-
-
-        {/* Customer Details */}
-        <div className="space-y-4">
-
-          {/* Name */}
-          <div className="grid grid-cols-[75px_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[100px_minmax(0,1fr)]">
-
-            <span className="text-sm text-gray-800 sm:text-base">
-              Name
-            </span>
-
-            <span className="min-w-0 break-words text-sm text-gray-900 sm:text-base">
-              Rahul Mishra
-            </span>
-
-          </div>
-
-
-          {/* Phone */}
-          <div className="grid grid-cols-[75px_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[100px_minmax(0,1fr)]">
-
-            <span className="text-sm text-gray-800 sm:text-base">
-              Phone
-            </span>
-
-            <span className="min-w-0 break-words text-sm text-gray-900 sm:text-base">
-              +91 98765 43210
-            </span>
-
-          </div>
-
-
-          {/* Address */}
-          <div className="grid grid-cols-[75px_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[100px_minmax(0,1fr)]">
-
-            <span className="text-sm text-gray-800 sm:text-base">
-              Address
-            </span>
-
-            <span className="min-w-0 break-words text-sm text-gray-900 sm:text-base">
-              Sector 62, Noida, Uttar Pradesh 201309
-            </span>
-
-          </div>
-
-        </div>
-
+      <section className="mt-6 rounded-lg bg-[#F0FBF7] p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-2"><UserRound size={20} /><h3 className="font-semibold text-slate-900">Customer information</h3></div>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div><dt className="text-sm text-slate-500">Name</dt><dd className="mt-1 text-sm text-slate-900">{order?.user?.name || "Customer"}</dd></div>
+          <div><dt className="text-sm text-slate-500">Phone</dt><dd className="mt-1 text-sm text-slate-900">{order?.user?.phone || "—"}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-sm text-slate-500">Delivery address</dt><dd className="mt-1 text-sm text-slate-900">{order?.deliveryAddress || "—"}</dd></div>
+        </dl>
       </section>
 
-
-      {/* ================= PRESCRIPTION IMAGE ================= */}
       <section className="mt-6">
-
-        {/* Heading */}
-        <div className="mb-3 flex items-center gap-3">
-
-          <ClipboardList
-            size={24}
-            className="shrink-0 text-gray-900"
-          />
-
-          <h3 className="text-lg font-medium text-gray-900">
-            Prescription Image
-          </h3>
-
-        </div>
-
-
-        {/* Image Container */}
-        <div className="relative flex h-[300px] w-full items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50 sm:h-[400px]">
-
-          <img
-            src={logo}
-            alt="Uploaded prescription"
-            className="h-full w-full object-contain"
-          />
-
-        </div>
-
+        <div className="mb-3 flex items-center gap-2"><ClipboardList size={20} /><h3 className="font-semibold text-slate-900">Uploaded prescription</h3></div>
+        {images.length ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {images.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`Prescription document ${index + 1}`} className="max-h-[480px] w-full rounded-lg border border-slate-200 object-contain" />)}
+          </div>
+        ) : <p className="text-sm text-slate-500">No prescription image is attached.</p>}
       </section>
 
-
-      {/* ================= PRESCRIBED MEDICINES ================= */}
       <section className="mt-6">
-
-        {/* Heading */}
-        <div className="mb-4 flex items-center gap-3">
-
-          <ClipboardList
-            size={24}
-            className="shrink-0 text-gray-900"
-          />
-
-          <h3 className="text-lg font-bold text-gray-900">
-            Prescribed Medicines
-          </h3>
-
-        </div>
-
-
-        {/* Table */}
-        <div className="w-full overflow-x-auto rounded-xl border border-gray-200">
-
-          <table className="w-full min-w-[400px] border-collapse">
-
-            <thead>
-              <tr className="bg-gray-50 text-left">
-
-                <th className="w-[60px] px-4 py-3 text-sm font-semibold text-gray-700 sm:w-[80px] sm:px-5">
-                  #
-                </th>
-
-                <th className="px-4 py-3 text-sm font-semibold text-gray-700 sm:px-5">
-                  Medicine
-                </th>
-
-              </tr>
-            </thead>
-
-
-            <tbody>
-
-              <tr className="border-t border-gray-200">
-
-                <td className="px-4 py-3 text-sm text-gray-800 sm:px-5">
-                  1
-                </td>
-
-                <td className="px-4 py-3 text-sm text-gray-900 sm:px-5">
-                  Azithromycin 500 mg
-                </td>
-
-              </tr>
-
-
-              <tr className="border-t border-gray-200">
-
-                <td className="px-4 py-3 text-sm text-gray-800 sm:px-5">
-                  2
-                </td>
-
-                <td className="px-4 py-3 text-sm text-gray-900 sm:px-5">
-                  Paracetamol 650 mg
-                </td>
-
-              </tr>
-
-
-              <tr className="border-t border-gray-200">
-
-                <td className="px-4 py-3 text-sm text-gray-800 sm:px-5">
-                  3
-                </td>
-
-                <td className="px-4 py-3 text-sm text-gray-900 sm:px-5">
-                  Vitamin D3 60,000 IU
-                </td>
-
-              </tr>
-
-            </tbody>
-
-          </table>
-
-        </div>
-
+        <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-900" htmlFor="prescription-remarks"><MessageSquare size={18} />Review remarks</label>
+        <textarea id="prescription-remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} rows="3" maxLength="500" disabled={prescription?.status !== "pending" || saving} className="w-full resize-y rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-emerald-600 disabled:bg-slate-50" />
       </section>
 
-
-      {/* ================= REMARKS ================= */}
-      <section className="mt-6">
-
-        {/* Heading */}
-        <div className="mb-3 flex items-center gap-2">
-
-          <MessageSquare
-            size={22}
-            className="shrink-0 text-gray-700"
-          />
-
-          <h3 className="text-base font-medium text-gray-900">
-            Remarks{" "}
-            <span className="text-gray-500">
-              (Optional)
-            </span>
-          </h3>
-
-        </div>
-
-
-        {/* Textarea */}
-        <textarea
-          placeholder="Add remarks here..."
-          className="h-[100px] w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none placeholder:text-gray-400 focus:border-green-500"
-        />
-
-      </section>
-
-
-      {/* ================= ACTIONS ================= */}
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-4">
-
-        {/* Reject */}
-        <button className="flex items-center justify-center gap-2 rounded-lg border border-red-500 px-6 py-3 text-sm font-medium text-red-500 transition hover:bg-red-50">
-
-          <XCircle size={20} />
-
-          Reject
-
-        </button>
-
-
-        {/* Approve */}
-        <button className="flex items-center justify-center gap-2 rounded-lg bg-green-600 px-7 py-3 text-sm font-medium text-white transition hover:bg-green-700">
-
-          <Check size={20} />
-
-          Approve
-
-        </button>
-
+      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button type="button" onClick={() => reviewPrescription("reject")} disabled={saving || prescription?.status !== "pending"} className="flex items-center justify-center gap-2 rounded-lg border border-red-500 px-5 py-2.5 text-sm font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-50"><XCircle size={18} />Reject</button>
+        <button type="button" onClick={() => reviewPrescription("approve")} disabled={saving || prescription?.status !== "pending"} className="flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"><Check size={18} />Approve</button>
       </div>
-
     </div>
   );
 };

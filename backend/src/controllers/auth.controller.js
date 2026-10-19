@@ -102,7 +102,6 @@ const registerUser = async (req, res) => {
 const loginUser = async(req,res)=>{
     try{
     const {identifier,password} = req.body;
-    console.log(identifier,password)
     if(!identifier || !password) {
         return res.status(400).json({
             message: "Email and password are required",
@@ -170,8 +169,8 @@ const loginUser = async(req,res)=>{
 
 const pharmistLogin = async(req,res)=>{
     try{
+    
     const {identifier,password} = req.body;
-    console.log(identifier,password,req.body.identifier);
     if(!identifier || !password) {
         return res.status(400).json({
             message: "Identifier and password are required",
@@ -224,7 +223,10 @@ const pharmistLogin = async(req,res)=>{
             name: user.name,
             email: user.email,
             role: "pharmacist",
-            status:user.status
+          status: user.status,
+          phone: user.phone,
+          address: user.address,
+          licenseNumber: user.licenseNumber,
         },
     });
 }catch (error) {
@@ -248,6 +250,24 @@ const logoutUser = async(req,res)=>{
             success: false,
         })
     }
+};
+
+const getCurrentUser = (req, res) => {
+  const user = req.user;
+
+  return res.status(200).json({
+    success: true,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      phone: user.phone,
+      address: user.address,
+      licenseNumber: user.licenseNumber,
+    },
+  });
 };
 
 
@@ -311,9 +331,10 @@ const pharmistRegister = async (req, res) => {
   } catch (error) {
     res.status(500).json({
         message: "Internal server error",
-        success: false
+        success: false,
+        error: error.message 
     });
   }
 };
 
-export { registerUser, loginUser ,pharmistLogin ,logoutUser, pharmistRegister};
+export { registerUser, loginUser ,pharmistLogin ,logoutUser, pharmistRegister, getCurrentUser};

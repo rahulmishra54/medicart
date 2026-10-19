@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 
 const prescriptionSchema = new mongoose.Schema(
   {
-    order: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
-      required: true,
-    },
+    
 
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -32,7 +28,7 @@ const prescriptionSchema = new mongoose.Schema(
 
     reviewedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Pharmacist",
+      ref: "Pharmacy",
       default: null,
     },
 

@@ -11,19 +11,23 @@ import {
 
 import logo from "../assets/logo.png";
 import {useNavigate} from "react-router-dom"
+import { useDispatch } from "react-redux";
+import { logout } from "../redux/authSlice.js";
 import api from "../api/api.js"
 const PharmistNavBar =()=>{
   const [expand,setExpand]=useState(false)
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   async function logoutUser(){
     try{
 
-      const response = await api.post("/auth/logout");
-      console.log(response.data);
-      navigate("/login");
+      await api.post("/auth/logout");
     }catch(error){
       console.log(error)
+    }finally{
+      dispatch(logout());
+      navigate("/login");
     }
   }
   

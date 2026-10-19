@@ -83,12 +83,12 @@ const Login = () => {
       remember: formData.get("remember"),
     };
     console.log(accountType);
-    console.log(loginData);
 
     try{
       if(accountType === "customer"){
       const response = await api.post("/auth/login",loginData)
-      dispatch(login(response.data));
+      dispatch(login(response.data.user));
+      navigate("/")
       if(response.data.user.role==="admin"){
         navigate("/admin/Category")
       }
@@ -96,7 +96,7 @@ const Login = () => {
       
       }else{
         const response = await api.post("/auth/pharmacists/login",loginData)
-        dispatch(login(response.data));
+        dispatch(login(response.data.user));
        
 
         if(response.data.user.status === "pending"){

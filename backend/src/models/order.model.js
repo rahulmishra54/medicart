@@ -50,6 +50,18 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    prescription: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Prescription",
+      default: null,
+    },
+
+    prescriptionStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "not_required"],
+      default: "not_required",
+    },
   },
   {
     timestamps: true,

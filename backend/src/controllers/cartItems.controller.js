@@ -1,31 +1,55 @@
 
 import CartItem from "../models/cartItem.model.js"
 import Cart from "../models/cart.model.js"
+import Medicine from "../models/medicine.model.js"
+
 async function addToCart(req,res){
     try{
-        const {medicineId ,quantity,price}= req.body
-        const userId = req.user
-        if(!userId || !medicineId || !quantity || !price){
+    if (req.user?.role !== "user") {
+      return res.status(403).json({ message: "Customer login is required", success: false });
+    }
+
+    const { medicineId } = req.body;
+    const quantity = Number(req.body.quantity);
+    if(!medicineId || !Number.isInteger(quantity) || quantity < 1){
             return res.status(400).json({
                 message: "Missing required fields",
                 success: false
             })
         }
 
-        const cart = Cart.findOne({user:userId})
-        if(!cart){
-            const newCart = new Cart({user:userId})
-            await newCart.save()
+    const medicine = await Medicine.findOne({ _id: medicineId, active: true });
+    if (!medicine) {
+      return res.status(404).json({ message: "Medicine not found", success: false });
+    }
+    if (quantity > medicine.stockQuantity) {
+      return res.status(400).json({ message: "Requested quantity is not in stock", success: false });
+    }
 
+    let cart = await Cart.findOne({ user: req.user._id });
+        if(!cart){
+      cart = await Cart.create({ user: req.user._id });
         }
 
-        const cartItem = new CartItem({
-            cart:cart._id,
-            medicine:medicineId,
-            quantity,
-            price
-        })
-        await cartItem.save()
+    let cartItem = await CartItem.findOne({ cart: cart._id, medicine: medicineId });
+    const updatedQuantity = (cartItem?.quantity || 0) + quantity;
+    if (updatedQuantity > medicine.stockQuantity) {
+      return res.status(400).json({ message: "Requested quantity is not in stock", success: false });
+    }
+
+    if (cartItem) {
+      cartItem.quantity = updatedQuantity;
+      cartItem.price = medicine.price * updatedQuantity;
+      await cartItem.save();
+    } else {
+      cartItem = await CartItem.create({
+        cart: cart._id,
+        medicine: medicineId,
+        quantity,
+        price: medicine.price * quantity,
+      });
+    }
+
         return res.status(201).json({
             message : "Item added to cart successfully",
             success : true,
@@ -45,6 +69,10 @@ async function addToCart(req,res){
 
 async function removeCartItem(req,res){
     try{
+    if (req.user?.role !== "user") {
+      return res.status(403).json({ message: "Customer login is required", success: false });
+    }
+
         const {cartItemId} = req.params
         if(!cartItemId){
             return res.status(400).json({
@@ -52,7 +80,10 @@ async function removeCartItem(req,res){
                 success : false
             })
         }
-        const cartItem = await CartItem.findByIdAndDelete(cartItemId)
+        const cart = await Cart.findOne({ user: req.user._id });
+        const cartItem = cart
+          ? await CartItem.findOneAndDelete({ _id: cartItemId, cart: cart._id })
+          : null;
         if(!cartItem){
             return res.status(404).json({
                 message : "Cart item not found",
@@ -77,8 +108,12 @@ async function removeCartItem(req,res){
 
 async function updateCartItem(req, res) {
   try {
+    if (req.user?.role !== "user") {
+      return res.status(403).json({ message: "Customer login is required", success: false });
+    }
+
     const { cartItemId } = req.params;
-    const { quantity } = req.body;
+    const quantity = Number(req.body.quantity);
 
     if (!quantity || quantity < 1) {
       return res.status(400).json({
@@ -87,7 +122,10 @@ async function updateCartItem(req, res) {
       });
     }
 
-    const cartItem = await CartItem.findById(cartItemId);
+    const cart = await Cart.findOne({ user: req.user._id });
+    const cartItem = cart
+      ? await CartItem.findOne({ _id: cartItemId, cart: cart._id })
+      : null;
 
     if (!cartItem) {
       return res.status(404).json({
@@ -96,13 +134,17 @@ async function updateCartItem(req, res) {
       });
     }
 
-    const medicine = await Medicine.findById(cartItem.medicine);
+    const medicine = await Medicine.findOne({ _id: cartItem.medicine, active: true });
 
     if (!medicine) {
       return res.status(404).json({
         message: "Medicine not found",
         success: false,
       });
+    }
+
+    if (quantity > medicine.stockQuantity) {
+      return res.status(400).json({ message: "Requested quantity is not in stock", success: false });
     }
 
     cartItem.quantity = quantity;

@@ -22,19 +22,6 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    phone: {
-      type: String,
-      trim: true,
-    },
-
-    address: {
-      type: String,
-      trim: true,
-    },
-
-    dateOfBirth: {
-      type: Date,
-    },
 
     role: {
       type: String,

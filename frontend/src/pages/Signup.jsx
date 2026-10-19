@@ -34,6 +34,7 @@ const Signup = () => {
       console.log(response)
       if(response.data.success){
         console.log("User registered successfully")
+        navigate("/")
       }
     }
     catch(error){
