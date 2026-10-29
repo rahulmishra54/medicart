@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Heart,
   Menu,
   Search,
   ShoppingCart,
@@ -21,6 +20,7 @@ function Navbar() {
   const [accountOpen, setAccountOpen] = useState(false);
 
   const user = useSelector((state) => state.auth.user);
+  console.log(user)
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -102,16 +102,6 @@ function Navbar() {
 
         {/* Shopping and Account Actions */}
         <div className="order-2 ml-auto flex shrink-0 items-center gap-3 lg:order-4 lg:ml-0 lg:gap-4">
-
-          {/* Wishlist */}
-          <Link
-            to="/Wishlist"
-            aria-label="Wishlist"
-            className="flex items-center gap-2 text-slate-600 transition hover:text-[#18845b]"
-          >
-            <Heart size={21} strokeWidth={1.8} />
-            <span className="hidden xl:inline text-sm">Wishlist</span>
-          </Link>
 
           {/* Cart */}
           <Link

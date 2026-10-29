@@ -3,43 +3,60 @@ import CartItem from "../models/cartItem.model.js"
 import Cart from "../models/cart.model.js"
 import Medicine from "../models/medicine.model.js"
 
-async function addToCart(req,res){
-    try{
+async function addToCart(req, res) {
+  try {
     if (req.user?.role !== "user") {
-      return res.status(403).json({ message: "Customer login is required", success: false });
+      return res.status(403).json({
+        success: false,
+        message: "Customer login is required",
+      });
     }
 
-    const { medicineId } = req.body;
-    const quantity = Number(req.body.quantity);
-    if(!medicineId || !Number.isInteger(quantity) || quantity < 1){
-            return res.status(400).json({
-                message: "Missing required fields",
-                success: false
-            })
-        }
+    const { medicineId, quantity: inputQuantity } = req.body;
+    const quantity = Number(inputQuantity);
 
-    const medicine = await Medicine.findOne({ _id: medicineId, active: true });
+    if (!medicineId || !Number.isInteger(quantity) || quantity < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid medicine or quantity",
+      });
+    }
+
+    const medicine = await Medicine.findOne({
+      _id: medicineId,
+      active: true,
+    });
+
     if (!medicine) {
-      return res.status(404).json({ message: "Medicine not found", success: false });
-    }
-    if (quantity > medicine.stockQuantity) {
-      return res.status(400).json({ message: "Requested quantity is not in stock", success: false });
+      return res.status(404).json({
+        success: false,
+        message: "Medicine not found",
+      });
     }
 
     let cart = await Cart.findOne({ user: req.user._id });
-        if(!cart){
-      cart = await Cart.create({ user: req.user._id });
-        }
 
-    let cartItem = await CartItem.findOne({ cart: cart._id, medicine: medicineId });
-    const updatedQuantity = (cartItem?.quantity || 0) + quantity;
-    if (updatedQuantity > medicine.stockQuantity) {
-      return res.status(400).json({ message: "Requested quantity is not in stock", success: false });
+    if (!cart) {
+      cart = await Cart.create({ user: req.user._id });
+    }
+
+    let cartItem = await CartItem.findOne({
+      cart: cart._id,
+      medicine: medicineId,
+    });
+
+    const newQuantity = (cartItem?.quantity || 0) + quantity;
+
+    if (newQuantity > medicine.stockQuantity) {
+      return res.status(400).json({
+        success: false,
+        message: "Requested quantity is not in stock",
+      });
     }
 
     if (cartItem) {
-      cartItem.quantity = updatedQuantity;
-      cartItem.price = medicine.price * updatedQuantity;
+      cartItem.quantity = newQuantity;
+      cartItem.price = medicine.price * newQuantity;
       await cartItem.save();
     } else {
       cartItem = await CartItem.create({
@@ -50,56 +67,67 @@ async function addToCart(req,res){
       });
     }
 
-        return res.status(201).json({
-            message : "Item added to cart successfully",
-            success : true,
-            cartItem
-        })
-    
-    }catch(error){
-        return res.status(500).json({
-            message: "Internal server error",
-            success : false
-        })
-    }
+    return res.status(201).json({
+      success: true,
+      message: "Item added to cart successfully",
+      cartItem,
+    });
+  } catch (error) {
+    console.error("Add to cart error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 }
 
 
 
 
-async function removeCartItem(req,res){
-    try{
+async function removeCartItem(req, res) {
+  try {
     if (req.user?.role !== "user") {
-      return res.status(403).json({ message: "Customer login is required", success: false });
+      return res.status(403).json({
+        success: false,
+        message: "Customer login is required",
+      });
     }
 
-        const {cartItemId} = req.params
-        if(!cartItemId){
-            return res.status(400).json({
-                message : "Cart item id is required",
-                success : false
-            })
-        }
-        const cart = await Cart.findOne({ user: req.user._id });
-        const cartItem = cart
-          ? await CartItem.findOneAndDelete({ _id: cartItemId, cart: cart._id })
-          : null;
-        if(!cartItem){
-            return res.status(404).json({
-                message : "Cart item not found",
-                success : false
-            })
-        }
-        return res.status(200).json({
-            message : "Cart item removed successfully",
-            success : true
-        })
-    }catch(error){
-        res.status(500).json({
-            message : "Internal server error",
-            success : false
-        })
+    const cart = await Cart.findOne({ user: req.user._id });
+
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
     }
+
+    const cartItem = await CartItem.findOneAndDelete({
+      _id: req.params.cartItemId,
+      cart: cart._id,
+    });
+
+    if (!cartItem) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart item not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cart item removed successfully",
+    });
+
+  } catch (error) {
+    console.error("Remove cart item error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 }
 
 

@@ -90,7 +90,7 @@ function Category({ categories: providedCategories, selectedCategory, onSelectCa
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold text-[#0B3154]">
-              Shop by Category
+              MedicineCategories
             </h2>
             <p className="mt-2 text-sm text-gray-500">
               Find what you need quickly

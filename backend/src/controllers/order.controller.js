@@ -6,8 +6,11 @@ import CartItem from "../models/cartItem.model.js";
 import Order from "../models/order.model.js";
 import OrderItem from "../models/orderItem.model.js";
 import Prescription from "../models/prescription.model.js";
+import Medicine from "../models/medicine.model.js";
 
 async function createOrder(req, res) {
+  let session;
+
     try {
         // 1. Verify customer authentication
         if (req.user?.role !== "user") {
@@ -20,6 +23,7 @@ async function createOrder(req, res) {
         const userId = req.user._id;
         const { prescriptionId } = req.body;
         let { deliveryAddress } = req.body;
+        session = await mongoose.startSession();
 
         // 2. Validate delivery address
         deliveryAddress = deliveryAddress?.trim();
@@ -45,7 +49,7 @@ async function createOrder(req, res) {
             prescription = await Prescription.findOne({
                 _id: prescriptionId,
                 uploadedBy: userId,
-            });
+            }).session(session);
 
             if (!prescription) {
                 return res.status(400).json({
@@ -56,7 +60,7 @@ async function createOrder(req, res) {
         }
 
         // 4. Find customer's cart
-        const cart = await Cart.findOne({ user: userId });
+        const cart = await Cart.findOne({ user: userId }).session(session);
 
         if (!cart) {
             return res.status(400).json({
@@ -66,9 +70,9 @@ async function createOrder(req, res) {
         }
 
         // 5. Fetch cart items
-        const cartItems = await CartItem.find({
-            cart: cart._id,
-        }).populate("medicine");
+        const cartItems = await CartItem.find({ cart: cart._id })
+          .populate("medicine")
+          .session(session);
 
         if (!cartItems.length) {
             return res.status(400).json({
@@ -101,7 +105,7 @@ async function createOrder(req, res) {
             }
 
             if (item.quantity > medicine.stockQuantity) {
-                return res.status(400).json({
+                return res.status(409).json({
                     message: `${medicine.name} does not have enough stock`,
                     success: false,
                 });
@@ -129,65 +133,80 @@ async function createOrder(req, res) {
         // 7. Create one order per pharmacy
         const orders = [];
 
-        for (const [pharmacyId, pharmacyItems] of itemsByPharmacy) {
+        await session.withTransaction(async () => {
+          orders.length = 0;
+
+          for (const [pharmacyId, pharmacyItems] of itemsByPharmacy) {
+            for (const item of pharmacyItems) {
+              const stockUpdate = await Medicine.updateOne(
+                {
+                  _id: item.medicine._id,
+                  active: true,
+                  expiryDate: { $gt: new Date() },
+                  stockQuantity: { $gte: item.quantity },
+                },
+                { $inc: { stockQuantity: -item.quantity } },
+                { session }
+              );
+
+              if (stockUpdate.modifiedCount !== 1) {
+                const stockError = new Error(`${item.medicine.name} is no longer available in the requested quantity`);
+                stockError.statusCode = 409;
+                throw stockError;
+              }
+            }
+
             const totalAmount = pharmacyItems.reduce(
-                (total, item) =>
-                    total + item.medicine.price * item.quantity,
-                0
+              (total, item) => total + item.medicine.price * item.quantity,
+              0
             );
 
             const pharmacyNeedsPrescription = pharmacyItems.some(
-                (item) =>
-                item.medicine.prescriptionRequired === true
+              (item) => item.medicine.prescriptionRequired === true
             );
 
-            const order = await Order.create({
-                user: userId,
-                pharmacy: pharmacyId,
-                totalAmount,
-                deliveryAddress,
-
-                prescription: pharmacyNeedsPrescription
-                    ? prescription._id
-                    : null,
-
-                prescriptionStatus: pharmacyNeedsPrescription
-                    ? "pending"
-                    : "not_required",
+            const order = new Order({
+              user: userId,
+              pharmacy: pharmacyId,
+              totalAmount,
+              deliveryAddress,
+              prescription: pharmacyNeedsPrescription ? prescription._id : null,
+              prescriptionStatus: pharmacyNeedsPrescription ? "pending" : "not_required",
             });
+            await order.save({ session });
 
             const orderItems = pharmacyItems.map((item) => ({
-                order: order._id,
-                medicine: item.medicine._id,
-                quantity: item.quantity,
-                unitPrice: item.medicine.price,
-                totalPrice: item.medicine.price * item.quantity,
+              order: order._id,
+              medicine: item.medicine._id,
+              quantity: item.quantity,
+              unitPrice: item.medicine.price,
+              totalPrice: item.medicine.price * item.quantity,
             }));
 
-            const savedItems = await OrderItem.insertMany(orderItems);
+            const savedItems = await OrderItem.insertMany(orderItems, { session });
+            orders.push({ order, orderItems: savedItems });
+          }
 
-            orders.push({
-                order,
-                orderItems: savedItems,
-            });
-        }
-
-        // 8. Clear cart after successful order creation
-        await CartItem.deleteMany({ cart: cart._id });
+          await CartItem.deleteMany({ cart: cart._id }).session(session);
+        });
 
         return res.status(201).json({
-            message: "Order placed successfully",
-            success: true,
-            orders,
+          message: "Order placed successfully",
+          success: true,
+          orders,
         });
-    } catch (error) {
+      } catch (error) {
         console.error("Create Order Error:", error);
 
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false,
+        return res.status(error.statusCode || 500).json({
+          message: error.statusCode === 409
+            ? error.message
+            : "Unable to place order. Please try again.",
+          success: false,
         });
-    }
+      } finally {
+        if (session) await session.endSession();
+      }
 }
 
 
@@ -196,54 +215,35 @@ async function createOrder(req, res) {
 
 async function getMyOrders(req, res) {
   try {
-    if (!["pharmacist", "user"].includes(req.user.role)) {
+    const { role, _id } = req.user;
+
+    if (!["pharmacist", "user"].includes(role)) {
       return res.status(403).json({
-        message: "Orders are not available for this account",
         success: false,
+        message: "Orders are not available for this account",
       });
     }
 
-    const userId = req.user._id;
-    let orders
-    if(req.user.role =="pharmacist"){
-      orders = await Order.find({ pharmacy: userId })
+    let orders;
+
+    if (role === "pharmacist") {
+      orders = await Order.find({ pharmacy: _id })
         .populate("user", "name email phone")
         .sort({ orderDate: -1 });
-
-
-    }
-    if(req.user.role=="user"){
-      orders = await Order.find({
-      user: userId
-    })
-      .populate("pharmacy", "name")
-      .sort({ createdAt: -1 });
-    }
-    
-
-    
-    
-    
-    const orderItems = await OrderItem.find({
-      order: { $in: orders.map((order) => order._id) },
-    }).populate("medicine", "name price");
-    const itemsByOrder = new Map();
-
-    for (const item of orderItems) {
-      const orderId = item.order.toString();
-      const items = itemsByOrder.get(orderId) || [];
-      items.push(item);
-      itemsByOrder.set(orderId, items);
+    } else {
+      orders = await Order.find({ user: _id })
+        .populate("pharmacy", "name")
+        .sort({ createdAt: -1 });
     }
 
-    orders = orders.map((order) => ({
-      ...order.toObject(),
-      items: itemsByOrder.get(order._id.toString()) || [],
-    }));
+    for (const order of orders) {
+      order.items = await OrderItem.find({ order: order._id })
+        .populate("medicine", "name price");
+    }
 
     return res.status(200).json({
-      message: "Orders fetched successfully",
       success: true,
+      message: "Orders fetched successfully",
       orders,
     });
 
@@ -251,12 +251,11 @@ async function getMyOrders(req, res) {
     console.error("Get My Orders Error:", error);
 
     return res.status(500).json({
-      message: "Internal server error",
       success: false,
+      message: "Internal server error",
     });
   }
 }
-
 
 // ================= GET ORDER BY ID =================
 

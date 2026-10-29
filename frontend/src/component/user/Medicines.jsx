@@ -2,17 +2,13 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import {
-  Heart,
   ShoppingCart,
   Eye,
-  Star,
   Package,
-  ShieldCheck,
 } from "lucide-react";
 import api from "../../api/api.js";
 
 const Medicines = ({ medicines }) => {
-  console.log("Medicines component received medicines:", medicines);
   const [quantities, setQuantities] = useState({});
   const [loading, setLoading] = useState({});
   const user = useSelector((state) => state.auth.user);
@@ -25,21 +21,6 @@ const Medicines = ({ medicines }) => {
   };
 
 
-  const addToWishList = async (medicineId)=>{
-    try{
-    if(!user){
-      window.alert("Please sign in to add items to your wishlist.");
-      return;
-    }
-    console.log()
-
-    const response = await api.post("/wishlist/items",{medicineId});
-    console.log(response.data)
-    }catch(error){
-      console.log(error.response?.data?.message)
-    }
-
-  }
   const addToCart = async (medicineId) => {
     if (!user) {
       window.alert("Please sign in to add items to your cart.");
@@ -51,14 +32,13 @@ const Medicines = ({ medicines }) => {
     try {
       setLoading((prev) => ({ ...prev, [medicineId]: true }));
 
-      const response = await api.post("/cart/items", {
+      await api.post("/cart/items", {
         medicineId,
         quantity,
       });
 
-      console.log(response.data);
     } catch (error) {
-      console.log(error.response?.data?.message || error.message);
+      window.alert(error.response?.data?.message || error.message || "Unable to add this medicine to your cart.");
     } finally {
       setLoading((prev) => ({ ...prev, [medicineId]: false }));
     }
@@ -69,11 +49,15 @@ const Medicines = ({ medicines }) => {
       <div className="mx-auto max-w-7xl">
         
 
+        {(!medicines || medicines.length === 0) && <p className="py-12 text-center text-sm text-slate-500">No medicines found.</p>}
         {medicines && medicines.length > 0 && (
           <div className="grid min-w-0 grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {medicines.map((medicine) => {
               const quantity = quantities[medicine._id] || 1;
               const totalPrice = medicine.price * quantity;
+              const discount = medicine.mrp > medicine.price
+                ? Math.round(((medicine.mrp - medicine.price) / medicine.mrp) * 100)
+                : 0;
 
               return (
                 <article
@@ -81,22 +65,11 @@ const Medicines = ({ medicines }) => {
                   className="flex h-full min-w-0 flex-col rounded-2xl border border-[#E5EDF3] bg-white p-2.5 shadow-sm"
                 >
                   <div className="relative flex h-28 items-center justify-center rounded-xl bg-[#F6FAFC] sm:h-32">
-                    <span className="absolute left-2 top-2 rounded-md bg-[#08A875] px-2 py-1 text-[10px] font-bold text-white">
-                      13% OFF
-                    </span>
+                    {discount > 0 && <span className="absolute left-2 top-2 rounded-md bg-[#08A875] px-2 py-1 text-[10px] font-bold text-white">{discount}% OFF</span>}
 
-                    <button
-                      type="button"
-                      aria-label="Add to favourites"
-                      className="absolute right-2 top-2 rounded-full bg-white p-1.5 text-[#718096]"
-                    onClick={()=>addToWishList(medicine._id)}
-                    >
-                      <Heart size={16} />
-                    </button>
-
-                    <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#DDF7F0]">
-                      <Package size={32} className="text-[#08A875]" />
-                    </div>
+                    {medicine.image
+                      ? <img src={medicine.image} alt={medicine.name} className="h-full w-full rounded-xl object-contain" />
+                      : <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-[#DDF7F0]"><Package size={32} className="text-[#08A875]" /></div>}
                   </div>
 
                   <div className="flex flex-1 flex-col pt-3">
@@ -108,34 +81,25 @@ const Medicines = ({ medicines }) => {
                       {medicine.pharmacy?.name || "Pharmacy"}
                     </p>
 
-                    <div className="mt-2 flex items-center gap-1 text-xs">
-                      <Star size={13} fill="#F5B942" stroke="#F5B942" />
-                      <span className="font-semibold text-[#0B3154]">
-                        4.6
-                      </span>
-                      <span className="text-[#718096]">(120)</span>
-                    </div>
-
                     <div className="mt-3 border-t border-[#E5EDF3] pt-2">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="text-xl font-extrabold text-[#0B3154]">
                           ₹{medicine.price}
                         </span>
 
-                        {medicine.originalPrice && (
+                        {medicine.mrp > medicine.price && (
                           <span className="text-xs text-[#718096] line-through">
-                            ₹{medicine.originalPrice}
+                            ₹{medicine.mrp}
                           </span>
                         )}
                       </div>
 
                       <p className="mt-1 text-xs text-[#718096]">
-                        {medicine.packSize || "Standard pack"}
+                        {medicine.stockQuantity > 0 ? `${medicine.stockQuantity} in stock` : "Out of stock"}
                       </p>
 
                       <span className="mt-2 inline-flex items-center gap-1 rounded-md bg-[#F0F8FF] px-2 py-1 text-[10px] font-medium text-[#0B3154]">
-                        <ShieldCheck size={12} />
-                        OTC Product
+                        {medicine.prescriptionRequired ? "Prescription required" : "No prescription required"}
                       </span>
                     </div>
 
@@ -184,7 +148,7 @@ const Medicines = ({ medicines }) => {
                       <button
                         type="button"
                         onClick={() => addToCart(medicine._id)}
-                        disabled={loading[medicine._id]}
+                        disabled={loading[medicine._id] || medicine.stockQuantity <= 0}
                         className="flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg bg-[#08A875] px-2 text-xs font-semibold text-white disabled:opacity-60"
                       >
                         <ShoppingCart size={14} />

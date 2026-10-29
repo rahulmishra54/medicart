@@ -3,43 +3,6 @@
 import Prescription from "../models/prescription.model.js";
 import { uploadImage } from "../services/cloudinary.js";
 import Order from "../models/order.model.js";
-const getMyPrescriptions = async(req,res)=>{
-    try{
-        const userId = req.user._id
-        if(!userId){
-            return res.status(400).json({
-                message : "User Id is required",
-                success : false
-            })
-        }
-
-        const matchingOrders = await Order.find({
-            pharmacy: userId,
-            prescription: { $ne: null },
-            $or: [
-                { prescriptionStatus: "pending" },
-                { prescriptionStatus: { $exists: false } },
-            ],
-        })
-            .populate({ path: "prescription", match: { status: "pending" } })
-            .populate("user", "name email phone")
-            .sort({ orderDate: -1 });
-        const prescriptions = matchingOrders.filter((order) => order.prescription);
-
-        return res.status(200).json({
-            message : "Prescriptions fetched successfully",
-            success :true,
-            prescriptions,
-            
-        })
-    }catch{
-        return res.status(500).json({
-            message : "Internal server error",
-            success : false
-        })
-    }
-}
-
 const getPendingPrescriptions = async (req, res) => {
     try {
         const pharmacistId = req.user._id;
@@ -52,10 +15,15 @@ const getPendingPrescriptions = async (req, res) => {
                 { prescriptionStatus: { $exists: false } },
             ],
         })
-            .populate({ path: "prescription", match: { status: "pending" } })
+            .populate("prescription")
             .populate("user", "name email phone")
             .sort({ orderDate: -1 });
-        const prescriptions = matchingOrders.filter((order) => order.prescription);
+        const prescriptions = matchingOrders.filter((order) => (
+            order.prescription && (
+                order.prescriptionStatus === "pending" ||
+                (!order.prescriptionStatus && order.prescription.status === "pending")
+            )
+        ));
 
         return res.status(200).json({
             message: "Pending prescriptions fetched successfully",
@@ -71,6 +39,8 @@ const getPendingPrescriptions = async (req, res) => {
         });
     }
 };
+
+const getMyPrescriptions = getPendingPrescriptions;
 
 
 const uploadPrescription = async (req, res) => {
@@ -187,26 +157,9 @@ const approvePrescription = async (req, res) => {
             });
         }
 
-        const prescription = await Prescription.findOneAndUpdate(
-            { _id: id, status: "pending" },
+        const updatedOrder = await Order.findOneAndUpdate(
             {
-                status: "approved",
-                reviewedBy: pharmacistId,
-                reviewDate: new Date(),
-                ...(remarks ? { remarks } : {}),
-            },
-            { new: true }
-        );
-
-        if (!prescription) {
-            return res.status(400).json({
-                message: "Prescription is not pending for approval",
-                success: false,
-            });
-        }
-
-        await Order.updateMany(
-            {
+                _id: order._id,
                 pharmacy: pharmacistId,
                 prescription: id,
                 $or: [
@@ -214,13 +167,22 @@ const approvePrescription = async (req, res) => {
                     { prescriptionStatus: { $exists: false } },
                 ],
             },
-            { $set: { prescriptionStatus: "approved" } }
-        );
+            { $set: { prescriptionStatus: "approved" } },
+            { new: true }
+        ).populate("prescription");
+
+        if (!updatedOrder) {
+            return res.status(400).json({
+                message: "Prescription is not pending for approval",
+                success: false,
+            });
+        }
 
         return res.status(200).json({
             message: "Prescription approved successfully",
             success: true,
-            prescription
+            prescription: updatedOrder.prescription,
+            order: updatedOrder,
         });
     } catch (error) {
         return res.status(500).json({
@@ -258,26 +220,9 @@ const rejectPrescription = async (req, res) => {
             });
         }
 
-        const prescription = await Prescription.findOneAndUpdate(
-            { _id: id, status: "pending" },
+        const updatedOrder = await Order.findOneAndUpdate(
             {
-                status: "rejected",
-                reviewedBy: pharmacistId,
-                reviewDate: new Date(),
-                remarks: remarks || "Prescription rejected by pharmacist",
-            },
-            { new: true }
-        );
-
-        if (!prescription) {
-            return res.status(400).json({
-                message: "Prescription is not pending for rejection",
-                success: false,
-            });
-        }
-
-        await Order.updateMany(
-            {
+                _id: order._id,
                 pharmacy: pharmacistId,
                 prescription: id,
                 $or: [
@@ -285,13 +230,22 @@ const rejectPrescription = async (req, res) => {
                     { prescriptionStatus: { $exists: false } },
                 ],
             },
-            { $set: { prescriptionStatus: "rejected" } }
-        );
+            { $set: { prescriptionStatus: "rejected" } },
+            { new: true }
+        ).populate("prescription");
+
+        if (!updatedOrder) {
+            return res.status(400).json({
+                message: "Prescription is not pending for rejection",
+                success: false,
+            });
+        }
 
         return res.status(200).json({
             message: "Prescription rejected successfully",
             success: true,
-            prescription
+            prescription: updatedOrder.prescription,
+            order: updatedOrder,
         });
     } catch (error) {
         return res.status(500).json({

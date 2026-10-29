@@ -9,11 +9,11 @@ import {
   updateStock,
   getInStockMedicines
 } from "../controllers/inventory.controller.js";
-import authMiddleware, { requireRole } from "../middlewares/authMiddleware.js";
+import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.use(authMiddleware, requireRole("pharmacist"));
+
 
 router.get("/", getInventory);
 router.get("/stats", getInventoryStats);

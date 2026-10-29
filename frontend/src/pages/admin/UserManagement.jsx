@@ -25,16 +25,11 @@ const UserManagement = () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Existing Admin Sidebar */}
-      <AdminSidebar />
-
-      {/* Main Section */}
-      <div className="min-w-0 flex-1">
-        {/* Existing Navbar */}
-        <PharmacistNavBar />
-
-        <main className="p-5 md:p-8">
+    <div className="min-h-screen w-full bg-gray-50">
+      <PharmacistNavBar />
+      <div className="lg:flex">
+        <AdminSidebar />
+        <main className="min-w-0 flex-1 p-4 sm:p-5 md:p-8">
           {/* Page Heading */}
           <div className="mb-7">
             <h1 className="mb-2 text-2xl font-bold text-[#0B3154]">

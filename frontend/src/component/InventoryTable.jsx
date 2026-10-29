@@ -5,7 +5,7 @@ const InventoryTable = ({ products = [], onUpdate }) => {
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
       {/* Desktop Header */}
-      <div className="hidden grid-cols-12 gap-4 bg-slate-50 px-5 py-4 text-xs font-semibold uppercase text-slate-500 lg:grid">
+      <div className="hidden grid-cols-12 gap-4 bg-slate-50 px-5 py-4 text-xs font-semibold uppercase text-slate-500 xl:grid">
         <div className="col-span-1">#</div>
         <div className="col-span-3">Medicine</div>
         <div className="col-span-2">Category</div>

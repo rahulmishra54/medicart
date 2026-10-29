@@ -123,6 +123,16 @@ const updateMedicine = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const medicineFilter = req.user.role === "admin"
+      ? { _id: id }
+      : req.user.role === "pharmacist"
+        ? { _id: id, pharmacy: req.user._id }
+        : null;
+
+    if (!medicineFilter) {
+      return res.status(403).json({ message: "You cannot update medicines", success: false });
+    }
+
     if (!id) {
       return res.status(400).json({
         message: "Medicine ID is required",
@@ -172,8 +182,8 @@ const updateMedicine = async (req, res) => {
     if (featured !== undefined) updateData.featured = featured;
     if (active !== undefined) updateData.active = active;
 
-    const updatedMedicine = await Medicine.findByIdAndUpdate(
-      id,
+    const updatedMedicine = await Medicine.findOneAndUpdate(
+      medicineFilter,
       updateData,
       {
         new: true,
@@ -233,8 +243,17 @@ const getMedicineById = async (req, res) => {
 const deleteMedicine = async (req, res) => {
   try {
     const { id } = req.params;
+    const medicineFilter = req.user.role === "admin"
+      ? { _id: id }
+      : req.user.role === "pharmacist"
+        ? { _id: id, pharmacy: req.user._id }
+        : null;
 
-    const medicine = await Medicine.findByIdAndDelete(id);
+    if (!medicineFilter) {
+      return res.status(403).json({ message: "You cannot delete medicines", success: false });
+    }
+
+    const medicine = await Medicine.findOneAndDelete(medicineFilter);
 
     if (!medicine) {
       return res.status(404).json({
@@ -257,21 +276,26 @@ const deleteMedicine = async (req, res) => {
 
 const searchMedicines = async(req,res)=>{
     try{
-        const {query}=req.query;
-        if(!query){
+    const query = req.query.query?.trim();
+    if(!query){
             return res.status(400).json({
                 message : "Search query is required",
                 success : false
             })
         }
 
+    const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const medicines = await Medicine.find({
+      active: true,
+      expiryDate: { $gt: new Date() },
             $or : [
-                {name : {$regex : query, $options : "i"}},
-                {brand : {$regex : query, $options : "i"}},
-                {genericName : {$regex : query, $options : "i"}}
+        {name : {$regex : safeQuery, $options : "i"}},
+        {brand : {$regex : safeQuery, $options : "i"}},
+        {genericName : {$regex : safeQuery, $options : "i"}}
             ]
-        });
+    })
+      .populate("category", "name")
+      .populate("pharmacy", "name");
 
         return res.status(200).json({
             message : "Medicines fetched successfully",
@@ -318,6 +342,7 @@ const getCatalogMedicines = async (req, res) => {
     };
     const medicines = await Medicine.find(filter)
       .populate("category", "name")
+      .populate("pharmacy", "name")
       .sort(sortOptions[sort] || { name: 1 });
 
     return res.status(200).json({
@@ -336,25 +361,30 @@ const getCatalogMedicines = async (req, res) => {
 const getAllMedicines = async (req, res) => {
   try {
     let medicines;
+    console.log(req.user.role)
 
-    // Admin can see all medicines
+    
     if (req.user.role === "admin" ) {
       medicines = await Medicine.find()
-        .populate("category")
-        .populate("pharmacy");
+        .populate("category", "name")
+        .populate("pharmacy", "name");
     }
 
-    // Pharmacist can see only their pharmacy medicines
+    
     else if (req.user.role === "pharmacist") {
       medicines = await Medicine.find({
         pharmacy: req.user._id,
       })
-        .populate("category")
-        .populate("pharmacy");
-    }
- 
+        .populate("category", "name")
+        .populate("pharmacy", "name");
 
-    console.log(medicines.length)
+    }
+    else if(req.user.role === "user"){
+      medicines = await Medicine.find({active:true, expiryDate:{$gt:new Date()}})
+    }    
+    else {
+      return res.status(403).json({ message: "You cannot view inventory", success: false });
+    }
 
     return res.status(200).json({
       message: "Medicines fetched successfully",
@@ -371,31 +401,5 @@ const getAllMedicines = async (req, res) => {
   }
 };
 
-const getAllMedicine = async (req,res)=>{
-  try{
-    const medicines = await Medicine.find()
-    .populate("category").populate("pharmacy");
-
-    console.log("[medicines] response", {
-      url: req.originalUrl,
-      status: 200,
-      data: { message: "Medicines fetched successfully", count: medicines.length, medicines },
-    });
-    return res.status(200).json({
-      message : "Medicines fetched successfully",
-      count : medicines.length,
-      medicines
-    })
-  }catch(error){
-    console.error("[medicines] request failed", {
-      url: req.originalUrl,
-      status: null,
-      error: error.message,
-    });
-  }
-}
-
-
-
-export{getAllMedicine, addMedicine, updateMedicine,getMedicineById,deleteMedicine,searchMedicines,getAllMedicines,getCatalogMedicines};
+export { addMedicine, updateMedicine, getMedicineById, deleteMedicine, searchMedicines, getAllMedicines, getCatalogMedicines };
 

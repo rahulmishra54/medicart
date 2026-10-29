@@ -46,6 +46,11 @@ const orderSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    razorpayOrderId: {
+      type: String,
+      default: null,
+    },
+
     deliveryAddress: {
       type: String,
       required: true,
@@ -60,7 +65,6 @@ const orderSchema = new mongoose.Schema(
     prescriptionStatus: {
       type: String,
       enum: ["pending", "approved", "rejected", "not_required"],
-      default: "not_required",
     },
   },
   {

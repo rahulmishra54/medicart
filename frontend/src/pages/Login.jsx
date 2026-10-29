@@ -123,7 +123,7 @@ const Login = () => {
   
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#F2FAF9] flex">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#F2FAF9] flex">
 
       {/* =====================================================
           LEFT SIDE
@@ -134,7 +134,7 @@ const Login = () => {
           hidden
           lg:flex
           lg:w-1/2
-          h-screen
+          min-h-screen
           shrink-0
           flex-col
           justify-center
@@ -259,11 +259,8 @@ const Login = () => {
         className="
           w-full
           lg:w-1/2
-          h-screen
-          min-h-0
+          min-h-screen
           overflow-x-hidden
-          overflow-y-auto
-          overscroll-contain
           flex
           items-center
           justify-center

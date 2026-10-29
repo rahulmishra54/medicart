@@ -29,7 +29,7 @@ const InventoryRow = ({ product, index, onUpdate }) => {
   return (
     <>
       {/* Desktop Row */}
-      <div className="hidden grid-cols-12 items-center gap-4 border-t border-slate-100 px-5 py-4 lg:grid">
+      <div className="hidden grid-cols-12 items-center gap-4 border-t border-slate-100 px-5 py-4 xl:grid">
 
         <div className="col-span-1 text-sm text-slate-500">
           {index + 1}
@@ -100,7 +100,7 @@ const InventoryRow = ({ product, index, onUpdate }) => {
       </div>
 
       {/* Mobile / Tablet Card */}
-      <div className="border-t border-slate-100 p-4 lg:hidden">
+      <div className="border-t border-slate-100 p-4 xl:hidden">
 
         <div className="flex items-start justify-between gap-3">
 

@@ -4,7 +4,6 @@ import Home from "../pages/user/Home.jsx";
 import Medicines from "../pages/user/Medicines.jsx";
 import Categories from "../component/user/Categories.jsx";
 import Cart from "../pages/user/Cart.jsx";
-import Wishlist from "../pages/user/Wishlist.jsx";
 import Offers from "../component/user/Offers.jsx";
 import Login from "../pages/Login.jsx";
 import PharmacySignup from "../pages/pharmacySignup.jsx";
@@ -39,6 +38,15 @@ const RequirePharmacist = ({ children }) => {
   return children;
 };
 
+const RequireAdmin = ({ children }) => {
+  const user = useSelector((state) => state.auth.user);
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "admin") return <Navigate to="/" replace />;
+
+  return children;
+};
+
 function AppRoutes() {
   return (
     <Routes>
@@ -46,7 +54,6 @@ function AppRoutes() {
       <Route path="/medicines" element={<Medicines />} />
       <Route path="/categories" element={<Categories />} />
       <Route path="/cart" element={<Cart />} />
-      <Route path="/wishlist" element={<Wishlist />} />
       <Route path="/offers" element={<Offers />} />
       <Route path="/orders" element={<Order />} />
       <Route path="/login" element={<Login />} />
@@ -60,19 +67,20 @@ function AppRoutes() {
   path="/pharmacist/registration-submitted"
   element={<PharmacistRegistrationSubmitted />}
 />
-      <Route path="/admin/Category" element={<Category />} />
-      <Route path="/admin/pharmacies" element={<PharmacyManagement />} />
-      <Route path="/admin/medicines" element={<MedicineManagement />} />
-      <Route path="/admin/medicines/:medicineId/edit" element={<EditMedicine />} />
-      <Route path="/admin/Category/create" element={<CreateCategory />} /><Route
+      <Route path="/admin/Category" element={<RequireAdmin><Category /></RequireAdmin>} />
+      <Route path="/admin/pharmacies" element={<RequireAdmin><PharmacyManagement /></RequireAdmin>} />
+      <Route path="/admin/medicines" element={<RequireAdmin><MedicineManagement /></RequireAdmin>} />
+      <Route path="/admin/medicines/:medicineId/edit" element={<RequireAdmin><EditMedicine /></RequireAdmin>} />
+      <Route path="/admin/Category/create" element={<RequireAdmin><CreateCategory /></RequireAdmin>} /><Route
   path="/admin/Category/edit/:categoryId"
-  element={<UpdateCategory />}
+      element={<RequireAdmin><UpdateCategory /></RequireAdmin>}
 />
-<Route path="/admin/users" element={<UserManagement />} />
+    <Route path="/admin/users" element={<RequireAdmin><UserManagement /></RequireAdmin>} />
 
-      <Route path="/admin/categories" element={<Category />} />
+      <Route path="/admin/categories" element={<RequireAdmin><Category /></RequireAdmin>} />
       <Route path="/pharmacist/inventory" element={<RequirePharmacist><Inventory /></RequirePharmacist>} />
       <Route path="/pharmacist/products/new" element={<RequirePharmacist><AddMedicine /></RequirePharmacist>} />
+      <Route path="/pharmacist/products/:medicineId/edit" element={<RequirePharmacist><EditMedicine /></RequirePharmacist>} />
       <Route path="/pharmacist/orders" element={<RequirePharmacist><Orders /></RequirePharmacist>} />
       <Route path="/pharmacist/orders/:orderId" element={<RequirePharmacist><OrderDetails /></RequirePharmacist>} />
       <Route path="/pharmacist/prescriptions" element={<RequirePharmacist><Prescriptions /></RequirePharmacist>} />

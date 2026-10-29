@@ -8,22 +8,31 @@ function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [isPrescriptionRequired, setIsPrescriptionRequired] = useState(false);
-  const [prescriptionFile, setPrescriptonFile] = useState([]);
+  const [prescriptionFiles, setPrescriptionFiles] = useState([]);
   const [prescriptionId, setPrescriptionId] = useState(null);
- 
+  const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isOrdering, setIsOrdering] = useState(false);
+  const [error, setError] = useState("");
 
   async function fetchCartItems() {
     try {
       const response = await api.get("/cart/");
+      if (!response.data.success || !Array.isArray(response.data.cartItems)) {
+        throw new Error(response.data.message || "Cart data is not available.");
+      }
 
-      setCartItems(response.data.cartItems || []);
+      setCartItems(response.data.cartItems);
+      setError("");
 
-      const requiresPrescription = (response.data.cartItems || []).some(
+      const requiresPrescription = response.data.cartItems.some(
         (item) => item.medicine?.prescriptionRequired
       );
       setIsPrescriptionRequired(requiresPrescription);
     } catch (error) {
-      console.log(error.response?.data?.message);
+      setError(error.response?.data?.message || error.message || "Unable to load your cart.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -35,24 +44,22 @@ function Cart() {
         quantity,
       });
 
-      console.log(response.data);
-      fetchCartItems();
+      if (!response.data.success) throw new Error(response.data.message || "Unable to update item quantity.");
+      setError("");
+      await fetchCartItems();
     } catch (error) {
-      console.log(error.response?.data?.message);
+      setError(error.response?.data?.message || error.message || "Unable to update item quantity.");
     }
   }
 
   async function removeItem(id) {
     try {
       const response = await api.delete(`/cart/items/${id}`);
-      console.log(response.data);
-      fetchCartItems();
+      if (!response.data.success) throw new Error(response.data.message || "Unable to remove item.");
+      setError("");
+      await fetchCartItems();
     } catch (error) {
-      console.error("Remove cart item failed:", {
-        status: error.response?.status,
-        response: error.response?.data,
-        message: error.message,
-      });
+      setError(error.response?.data?.message || error.message || "Unable to remove item.");
     }
   }
 
@@ -66,15 +73,15 @@ function Cart() {
 
   const proceedToOrder = async () => {
     try {
+      setIsOrdering(true);
+      setError("");
       if (!deliveryAddress.trim()) {
-        window.alert("Please enter your delivery address.");
+        setError("Please enter your delivery address.");
         return;
       }
 
       if (isPrescriptionRequired && !prescriptionId) {
-        window.alert(
-          "Some items in your cart require a prescription. Please upload prescription before proceeding to order."
-        );
+        setError("Some items require a prescription. Upload it before placing your order.");
         return;
       }
 
@@ -83,16 +90,16 @@ function Cart() {
         prescriptionId,
       });
 
-      console.log(response.data);
-
       if (response.data.success) {
         setCartItems([]);
         navigate("/orders");
+      } else {
+        throw new Error(response.data.message || "Unable to place your order.");
       }
     } catch (error) {
-      window.alert(
-        error.response?.data?.message || "Unable to place your order. Please try again."
-      );
+      setError(error.response?.data?.message || error.message || "Unable to place your order.");
+    } finally {
+      setIsOrdering(false);
     }
   };
 
@@ -100,14 +107,16 @@ function Cart() {
 
   const uploadPrescription = async () => {
     try {
-      if (prescriptionFile.length === 0) {
-        window.alert("Please select prescription files to upload.");
+      setIsUploading(true);
+      setError("");
+      if (prescriptionFiles.length === 0) {
+        setError("Select at least one prescription file to upload.");
         return;
       }
 
       const formData = new FormData();
 
-      prescriptionFile.forEach((file) => {
+      prescriptionFiles.forEach((file) => {
         formData.append("prescription", file);
       });
 
@@ -116,18 +125,16 @@ function Cart() {
         formData
       );
 
-      console.log(response.data);
-
       if (response.data.success) {
-        window.alert("Prescription uploaded successfully.");
         setPrescriptionId(response.data.prescription._id);
-        setPrescriptonFile([]);
+        setPrescriptionFiles([]);
+      } else {
+        throw new Error(response.data.message || "Unable to upload your prescription.");
       }
     } catch (error) {
-      console.error(
-        "Prescription upload failed:",
-        error.response?.data || error.message
-      );
+      setError(error.response?.data?.message || error.message || "Unable to upload your prescription.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -179,7 +186,14 @@ function Cart() {
                   </p>
                 </div>
 
-                {cartItems.length > 0 ? (
+                {loading ? (
+                  <p className="p-8 text-center text-sm text-slate-500">Loading your cart...</p>
+                ) : error && cartItems.length === 0 ? (
+                  <div role="alert" className="p-8 text-center text-sm text-red-700">
+                    Unable to load your cart: {error}
+                    <button type="button" onClick={fetchCartItems} className="ml-2 font-semibold underline">Try again</button>
+                  </div>
+                ) : cartItems.length > 0 ? (
                   <div className="p-4 sm:p-6">
 
                     {cartItems.map((item) => (
@@ -386,7 +400,7 @@ function Cart() {
                       multiple
                       className="sr-only"
                       onChange={(e) =>
-                        setPrescriptonFile(Array.from(e.target.files || []))
+                        setPrescriptionFiles(Array.from(e.target.files || []))
 
 
                       }
@@ -417,9 +431,9 @@ function Cart() {
 
                   {/* Selected File */}
 
-                  {prescriptionFile.length > 0 && (
+                  {prescriptionFiles.length > 0 && (
                     <>
-                      {prescriptionFile.map((file, index) => (
+                      {prescriptionFiles.map((file, index) => (
                         <div
                           key={`${file.name}-${index}`}
                           className="mt-4 flex items-center gap-3 rounded-xl border border-[#E5EDF3] bg-[#F8FBFD] p-4"
@@ -448,9 +462,10 @@ function Cart() {
                         type="button"
                         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#08A875] px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#07865F]"
                         onClick={uploadPrescription}
+                        disabled={isUploading}
                       >
                         <span>⇧</span>
-                        Upload Prescription
+                        {isUploading ? "Uploading..." : "Upload Prescription"}
                       </button>
                     </>
                   )}
@@ -557,9 +572,10 @@ function Cart() {
                     onClick={() => {
                       proceedToOrder();
                     }}
-                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#08A875] px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#07865F]"
+                    disabled={isOrdering || loading || cartItems.length === 0}
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#08A875] px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#07865F] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Proceed to Order <span>→</span>
+                    {isOrdering ? "Placing order..." : "Proceed to Order"} <span>→</span>
                   </button>
 
                 </div>
@@ -572,6 +588,8 @@ function Cart() {
                 <p className="mt-2 text-center text-xs text-[#718096]">
                   Your health information deserves privacy.
                 </p>
+                {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+                {prescriptionId && <p role="status" className="mt-3 text-sm text-emerald-700">Prescription uploaded successfully.</p>}
 
               </section>
 

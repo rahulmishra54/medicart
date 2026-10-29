@@ -53,8 +53,6 @@ const Footer = () => {
               <li><Link to="/medicines" className="transition hover:text-[#19A974]">Medicines</Link></li>
               <li><Link to="/categories" className="transition hover:text-[#19A974]">Categories</Link></li>
               <li><Link to="/offers" className="transition hover:text-[#19A974]">Offers</Link></li>
-              <li><Link to="/wishlist" className="transition hover:text-[#19A974]">Wishlist</Link></li>
-
             </ul>
 
           </div>

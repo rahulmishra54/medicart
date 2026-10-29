@@ -86,7 +86,7 @@ const PharmacistDashboard = () => {
           <Link to="/pharmacist/orders" className="text-sm font-semibold text-[#15966F] hover:underline">View all</Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
+          <table className="w-full min-w-155 text-left text-sm">
             <thead className="bg-[#F8FBFC] text-xs uppercase text-[#718096]">
               <tr><th className="px-5 py-3 font-semibold">Order</th><th className="px-5 py-3 font-semibold">Customer</th><th className="px-5 py-3 font-semibold">Date</th><th className="px-5 py-3 font-semibold">Total</th><th className="px-5 py-3 font-semibold">Status</th></tr>
             </thead>

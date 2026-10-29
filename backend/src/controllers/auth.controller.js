@@ -180,7 +180,7 @@ const pharmistLogin = async(req,res)=>{
     const user = await pharmacy.findOne({
   $or: [
     { email: identifier },
-    { mobile: identifier }
+    { phone: identifier }
   ]
 });
     if (!user) {

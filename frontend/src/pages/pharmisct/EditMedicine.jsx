@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import AdminSidebar from "../../component/admin/AdminSidebar.jsx";
 import PharmistNavBar from "../../component/PharmistNavBar.jsx";
+import PharmacistLayout from "./PharmacistLayout.jsx";
 import api from "../../api/api.js";
 
 const emptyForm = {
@@ -26,6 +28,9 @@ const emptyForm = {
 const EditMedicine = () => {
   const { medicineId } = useParams();
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
+  const isPharmacist = user?.role === "pharmacist";
+  const returnPath = isPharmacist ? "/pharmacist/inventory" : "/admin/medicines";
   const [form, setForm] = useState(emptyForm);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +45,7 @@ const EditMedicine = () => {
       try {
         const [medicineResponse, categoryResponse] = await Promise.all([
           api.get(`/medicines/${medicineId}`),
-          api.get("/admin/categories"),
+          api.get("/categories"),
         ]);
         const medicine = medicineResponse.data?.medicine;
         const categoryRecords = categoryResponse.data?.categories;
@@ -128,7 +133,7 @@ const EditMedicine = () => {
         throw new Error("Unexpected medicine update response");
       }
 
-      navigate("/admin/medicines", {
+      navigate(returnPath, {
         state: { success: "Medicine updated successfully." },
       });
     } catch {
@@ -146,7 +151,7 @@ const EditMedicine = () => {
           <h1 className="mt-1 text-2xl font-bold text-[#17324D]">Edit medicine</h1>
         </div>
         <Link
-          to="/admin/medicines"
+          to={returnPath}
           className="text-sm font-semibold text-[#15966F] hover:underline"
         >
           Back to medicines
@@ -237,7 +242,7 @@ const EditMedicine = () => {
           </div>
 
           <div className="mt-6 flex flex-col-reverse justify-end gap-3 border-t border-[#EEF3F5] pt-5 sm:flex-row">
-            <Link to="/admin/medicines" className="rounded-lg border border-[#DCE7EC] px-4 py-2.5 text-center text-sm font-medium text-[#64748B]">Cancel</Link>
+            <Link to={returnPath} className="rounded-lg border border-[#DCE7EC] px-4 py-2.5 text-center text-sm font-medium text-[#64748B]">Cancel</Link>
             <button type="submit" disabled={saving} className="rounded-lg bg-[#15966F] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#117F5E] disabled:cursor-not-allowed disabled:opacity-60">
               {saving ? "Saving..." : "Save changes"}
             </button>
@@ -247,15 +252,15 @@ const EditMedicine = () => {
     </div>
   );
 
-  return (
-    <div className="min-h-screen w-full bg-[#F5FAFC]">
-      <PharmistNavBar />
-      <div className="lg:flex">
-        <AdminSidebar />
-        <main className="min-w-0 flex-1">{formContent}</main>
-      </div>
+  if (isPharmacist) return <PharmacistLayout>{formContent}</PharmacistLayout>;
+
+  return <div className="min-h-screen w-full bg-[#F5FAFC]">
+    <PharmistNavBar />
+    <div className="lg:flex">
+      <AdminSidebar />
+      <main className="min-w-0 flex-1">{formContent}</main>
     </div>
-  );
+  </div>;
 };
 
 export default EditMedicine;

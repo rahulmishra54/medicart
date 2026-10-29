@@ -12,12 +12,8 @@ import {
 
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import {useDispatch} from "react-redux";
-
-import { registerPharmisct } from "../redux/pharmisctAuthSlice.js";
+import api from "../api/api.js";
 const PharmacySignup = () => {
-  const dispatch = useDispatch()
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,19 +33,13 @@ const PharmacySignup = () => {
       confirmPassword: formValues.get("confirmPassword"),
     };
 
-    console.log("PHARMACIST REGISTER REQUEST:", requestData);
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post(
-        "http://localhost:4000/api/v1/auth/pharmacists/register",
-        requestData,
-        { headers: { "Content-Type": "application/json" } },
-      );
-      dispatch(registerPharmisct(response.data));
+      await api.post("/auth/pharmacists/register", requestData);
       navigate("/pharmacist/registration-submitted");
     } catch (error) {
-      console.log("PHARMACIST REGISTER ERROR:", error.response?.data);
+      console.error("Pharmacy registration failed:", error.response?.data?.message || error.message);
     } finally {
       setIsSubmitting(false);
     }

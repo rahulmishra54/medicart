@@ -40,7 +40,7 @@ const AddProduct = () => {
       setCategoryError("");
 
       try {
-        const response = await api.get("/admin/categories");
+        const response = await api.get("/categories");
         const categoryRecords = response.data?.categories;
 
         if (!Array.isArray(categoryRecords)) {
@@ -104,7 +104,6 @@ const AddProduct = () => {
 
     try {
       const response = await api.post("/medicines/", productData);
-      console.log(response.data)
       if (!response.data?.medicine) {
         throw new Error("Unexpected medicine response");
       }

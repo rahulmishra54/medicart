@@ -45,7 +45,7 @@ const Prescriptions = () => {
         </header>
 
         <div className="overflow-x-auto rounded-xl border border-[#E2EDF1] bg-white">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-180 text-left text-sm">
             <thead className="bg-[#F8FBFC] text-xs uppercase text-[#718096]">
               <tr>
                 <th className="px-5 py-4 font-semibold">Prescription</th>

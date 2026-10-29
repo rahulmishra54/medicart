@@ -1,108 +1,47 @@
-
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 import Pharmacy from "../models/pharmacy.model.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
-    
-    const accessToken = req.cookies?.token;
-   
+    const token = req.cookies?.token;
 
-    if (!accessToken) {
+    if (!token) {
       return res.status(401).json({
         success: false,
         message: "Authentication required",
       });
     }
 
-    
-    const decoded = jwt.verify(
-      accessToken,
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-   
+    let user;
+
     if (decoded.role === "pharmacist") {
-      const pharmacist = await Pharmacy.findById(
-        decoded.userId
-      ).select("-password");
-
-      if (!pharmacist) {
-        return res.status(401).json({
-          success: false,
-          message: "Pharmacy account not found",
-        });
-      }
-
-      req.user = {
-        ...pharmacist.toObject(),
-        role: "pharmacist",
-      };
-
-      return next();
+      user = await Pharmacy.findById(decoded.userId).select("-password");
+    } else {
+      user = await User.findById(decoded.userId).select("-password");
     }
 
-    
-    if (decoded.role === "user") {
-      const user = await User.findById(
-        decoded.userId
-      ).select("-password");
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: "User not found",
-        });
-      }
-
-      req.user = {
-        ...user.toObject(),
-        role: "user",
-      };
-
-      return next();
+    if (!user || (decoded.role === "admin" && user.role !== "admin")) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    if (decoded.role === "admin"){
-      const admin = await User.findById(decoded.userId).select("-password");
-      if(!admin || admin.role!=="admin"){
-        return res.status(401).json({
-          success: false
-        })
-      }
-      req.user = {
-        ...admin.toObject(),
-        role: "admin"
-      }
-      return next();
-    }
+    req.user = {
+      ...user.toObject(),
+      role: decoded.role,
+    };
 
- 
-    return res.status(403).json({
-      success: false,
-      message: "Invalid user role",
-    });
-
+    return next();
   } catch (error) {
-    console.error("Auth middleware error:", error.message);
-
     return res.status(401).json({
       success: false,
-      message: "Invalid or expired access token",
+      message: "Invalid or expired token",
     });
   }
-};
-
-export const requireRole = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user?.role)) {
-    return res.status(403).json({
-      success: false,
-      message: "You are not authorized to access this resource",
-    });
-  }
-
-  return next();
 };
 
 export default authMiddleware;

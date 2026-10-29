@@ -51,6 +51,7 @@ const PrescriptionDetails = () => {
         throw new Error(response.data.message || "Unable to update prescription review.");
       }
       setPrescription(response.data.prescription);
+      setOrder(response.data.order);
       setMessage(action === "approve" ? "Prescription approved." : "Prescription rejected.");
     } catch (requestError) {
       setError(requestError.response?.data?.message || requestError.message || "Unable to update prescription review.");
@@ -67,9 +68,10 @@ const PrescriptionDetails = () => {
     : prescription?.imageUrl
       ? [prescription.imageUrl]
       : [];
+  const reviewStatus = order?.prescriptionStatus || prescription?.status || "pending";
 
   return (
-    <div className="w-full max-w-[900px] rounded-xl border border-[#E2EDF1] bg-white p-4 sm:p-6 lg:p-8">
+    <div className="w-full max-w-225 rounded-xl border border-[#E2EDF1] bg-white p-4 sm:p-6 lg:p-8">
       <h2 className="text-2xl font-bold text-[#17324D]">Prescription details</h2>
 
       {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
@@ -79,7 +81,7 @@ const PrescriptionDetails = () => {
         <div><dt className="text-sm text-slate-500">Order ID</dt><dd className="mt-1 break-all font-semibold text-slate-900">{order?._id}</dd></div>
         <div><dt className="text-sm text-slate-500">Prescription ID</dt><dd className="mt-1 break-all font-semibold text-slate-900">{prescription?._id}</dd></div>
         <div><dt className="text-sm text-slate-500">Received</dt><dd className="mt-1 font-semibold text-slate-900">{order?.orderDate ? new Date(order.orderDate).toLocaleString("en-IN") : "—"}</dd></div>
-        <div><dt className="text-sm text-slate-500">Review status</dt><dd className="mt-1 font-semibold capitalize text-slate-900">{prescription?.status || "pending"}</dd></div>
+        <div><dt className="text-sm text-slate-500">Review status</dt><dd className="mt-1 font-semibold capitalize text-slate-900">{reviewStatus}</dd></div>
       </dl>
 
       <section className="mt-6 rounded-lg bg-[#F0FBF7] p-4 sm:p-5">
@@ -95,19 +97,19 @@ const PrescriptionDetails = () => {
         <div className="mb-3 flex items-center gap-2"><ClipboardList size={20} /><h3 className="font-semibold text-slate-900">Uploaded prescription</h3></div>
         {images.length ? (
           <div className="grid gap-3 sm:grid-cols-2">
-            {images.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`Prescription document ${index + 1}`} className="max-h-[480px] w-full rounded-lg border border-slate-200 object-contain" />)}
+            {images.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`Prescription document ${index + 1}`} className="max-h-120 w-full rounded-lg border border-slate-200 object-contain" />)}
           </div>
         ) : <p className="text-sm text-slate-500">No prescription image is attached.</p>}
       </section>
 
       <section className="mt-6">
         <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-900" htmlFor="prescription-remarks"><MessageSquare size={18} />Review remarks</label>
-        <textarea id="prescription-remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} rows="3" maxLength="500" disabled={prescription?.status !== "pending" || saving} className="w-full resize-y rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-emerald-600 disabled:bg-slate-50" />
+        <textarea id="prescription-remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} rows="3" maxLength="500" disabled={reviewStatus !== "pending" || saving} className="w-full resize-y rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-emerald-600 disabled:bg-slate-50" />
       </section>
 
       <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <button type="button" onClick={() => reviewPrescription("reject")} disabled={saving || prescription?.status !== "pending"} className="flex items-center justify-center gap-2 rounded-lg border border-red-500 px-5 py-2.5 text-sm font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-50"><XCircle size={18} />Reject</button>
-        <button type="button" onClick={() => reviewPrescription("approve")} disabled={saving || prescription?.status !== "pending"} className="flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"><Check size={18} />Approve</button>
+        <button type="button" onClick={() => reviewPrescription("reject")} disabled={saving || reviewStatus !== "pending"} className="flex items-center justify-center gap-2 rounded-lg border border-red-500 px-5 py-2.5 text-sm font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-50"><XCircle size={18} />Reject</button>
+        <button type="button" onClick={() => reviewPrescription("approve")} disabled={saving || reviewStatus !== "pending"} className="flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"><Check size={18} />Approve</button>
       </div>
     </div>
   );

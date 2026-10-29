@@ -278,7 +278,7 @@ const PharmacyManagement = () => {
 
       {selectedPharmacy && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#17324D]/35 p-4"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#17324D]/35 p-4 sm:items-center"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setSelectedPharmacy(null);
@@ -288,7 +288,7 @@ const PharmacyManagement = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="pharmacy-detail-title"
-            className="w-full max-w-lg rounded-xl border border-[#E2EDF1] bg-white p-5 shadow-xl sm:p-6"
+            className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-[#E2EDF1] bg-white p-5 shadow-xl sm:p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div>

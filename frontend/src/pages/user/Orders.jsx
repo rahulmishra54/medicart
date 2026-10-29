@@ -16,7 +16,13 @@ import Navbar from "../../component/user/Navbar.jsx";
 import Footer from "../../component/user/Footer.jsx";
 import api from "../../api/api.js";
 
-const filters = ["All Orders", "Processing", "Shipped", "Delivered", "Cancelled"];
+const filters = [
+  "All Orders",
+  "Processing",
+  "Shipped",
+  "Delivered",
+  "Cancelled",
+];
 
 const statusStyles = {
   Processing: {
@@ -50,6 +56,7 @@ const formatDate = (date) => {
   if (!date) return "—";
 
   const parsedDate = new Date(date);
+
   if (Number.isNaN(parsedDate.getTime())) return "—";
 
   return parsedDate.toLocaleDateString("en-IN", {
@@ -63,9 +70,20 @@ const normalizeStatus = (status) => {
   const value = String(status || "Processing").toLowerCase();
 
   if (value === "delivered") return "Delivered";
-  if (value === "shipped" || value === "dispatched") return "Shipped";
-  if (value === "cancelled" || value === "canceled") return "Cancelled";
-  if (value === "pending" || value === "processing" || value === "confirmed") {
+
+  if (value === "shipped" || value === "dispatched") {
+    return "Shipped";
+  }
+
+  if (value === "cancelled" || value === "canceled") {
+    return "Cancelled";
+  }
+
+  if (
+    value === "pending" ||
+    value === "processing" ||
+    value === "confirmed"
+  ) {
     return "Processing";
   }
 
@@ -75,48 +93,70 @@ const normalizeStatus = (status) => {
 const normalizeOrder = (order) => {
   const rawItems = order.orderItems || order.items || [];
 
-  const items = rawItems.map((entry, index) => {
-    const item = entry.medicine ? entry : entry;
-    const medicine = item.medicine && typeof item.medicine === "object"
-      ? item.medicine
-      : {};
+  const items = rawItems.map((item, index) => {
+    const medicine =
+      item.medicine && typeof item.medicine === "object"
+        ? item.medicine
+        : {};
 
     return {
-      id: item._id || item.id || `${order._id || order.id}-item-${index}`,
+      id:
+        item._id ||
+        item.id ||
+        `${order._id || order.id}-item-${index}`,
+
       name: medicine.name || item.name || "Medicine",
-      pack: medicine.packSize || medicine.pack || item.pack || "",
+
+      pack:
+        medicine.packSize ||
+        medicine.pack ||
+        item.pack ||
+        "",
+
       quantity: Number(item.quantity || 1),
+
       price: Number(
         item.unitPrice ??
-        item.price ??
-        medicine.price ??
-        0
+          item.price ??
+          medicine.price ??
+          0
       ),
+
       totalPrice: Number(
         item.totalPrice ??
-        (Number(item.unitPrice ?? item.price ?? medicine.price ?? 0) *
-          Number(item.quantity || 1))
+          Number(
+            item.unitPrice ??
+              item.price ??
+              medicine.price ??
+              0
+          ) * Number(item.quantity || 1)
       ),
     };
   });
 
   const totalAmount = Number(
     order.totalAmount ??
-    order.total ??
-    items.reduce((sum, item) => sum + item.totalPrice, 0)
+      order.total ??
+      items.reduce((sum, item) => sum + item.totalPrice, 0)
   );
 
   return {
-    id: order._id || order.id,
-    date: formatDate(order.createdAt || order.date || order.orderDate),
+    id: String(order._id ?? order.id ?? ""),
+    date: formatDate(
+      order.createdAt || order.date || order.orderDate
+    ),
     total: totalAmount,
     status: normalizeStatus(order.status),
-    deliveryDate: order.deliveryDate ? formatDate(order.deliveryDate) : null,
+    deliveryDate: order.deliveryDate
+      ? formatDate(order.deliveryDate)
+      : null,
     items,
+
     pharmacyName:
       order.pharmacy && typeof order.pharmacy === "object"
         ? order.pharmacy.name
         : null,
+
     deliveryAddress: order.deliveryAddress || "",
     prescriptionStatus: order.prescriptionStatus || null,
   };
@@ -131,8 +171,6 @@ function Orders() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    let isMounted = true;
-
     const fetchOrders = async () => {
       try {
         setLoading(true);
@@ -147,44 +185,71 @@ function Orders() {
             ? [data]
             : [];
 
-        if (isMounted) {
-          setOrders(receivedOrders.map(normalizeOrder));
-        }
+        setOrders(receivedOrders.map(normalizeOrder));
       } catch (error) {
         console.error("Failed to fetch orders:", error);
-        if (isMounted) {
-          setErrorMessage(
-            error.response?.data?.message || "Unable to load your orders. Please try again."
-          );
-        }
+
+        setErrorMessage(
+          error.response?.data?.message ||
+            "Unable to load your orders."
+        );
       } finally {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       }
     };
 
     fetchOrders();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
-  const filteredOrders = useMemo(() => {
+  // Filter orders by status, order ID, pharmacy, or medicine name
+  const filterOrders = () => {
     const searchText = search.toLowerCase().trim();
+    const filteredOrders = [];
 
-    return orders.filter((order) => {
-      const matchesStatus =
-        activeFilter === "All Orders" || order.status === activeFilter;
+    for (const order of orders) {
+      if (
+        activeFilter !== "All Orders" &&
+        order.status !== activeFilter
+      ) {
+        continue;
+      }
 
-      const matchesSearch =
-        !searchText ||
-        String(order.id).toLowerCase().includes(searchText) ||
-        order.items.some((item) => item.name.toLowerCase().includes(searchText)) ||
-        String(order.pharmacyName || "").toLowerCase().includes(searchText);
+      let matchesSearch = false;
 
-      return matchesStatus && matchesSearch;
-    });
-  }, [orders, activeFilter, search]);
+      if (
+        String(order.id)
+          .toLowerCase()
+          .includes(searchText)
+      ) {
+        matchesSearch = true;
+      }
+
+      if (
+        (order.pharmacyName || "")
+          .toLowerCase()
+          .includes(searchText)
+      ) {
+        matchesSearch = true;
+      }
+
+      for (const item of order.items) {
+        if (
+          item.name
+            .toLowerCase()
+            .includes(searchText)
+        ) {
+          matchesSearch = true;
+          break;
+        }
+      }
+
+      if (matchesSearch) {
+        filteredOrders.push(order);
+      }
+    }
+
+    return filteredOrders;
+  };
 
   const summary = [
     {
@@ -195,23 +260,64 @@ function Orders() {
     },
     {
       label: "Processing",
-      value: orders.filter((order) => order.status === "Processing").length,
+      value: orders.filter(
+        (order) => order.status === "Processing"
+      ).length,
       Icon: Clock3,
       color: "bg-amber-50 text-amber-600",
     },
     {
       label: "Shipped",
-      value: orders.filter((order) => order.status === "Shipped").length,
+      value: orders.filter(
+        (order) => order.status === "Shipped"
+      ).length,
       Icon: Truck,
       color: "bg-blue-50 text-blue-600",
     },
     {
       label: "Delivered",
-      value: orders.filter((order) => order.status === "Delivered").length,
+      value: orders.filter(
+        (order) => order.status === "Delivered"
+      ).length,
       Icon: CheckCircle2,
       color: "bg-emerald-50 text-emerald-600",
     },
   ];
+
+  async function proceedToPayment(order) {
+    const orderId = String(order?.id ?? "");
+
+    console.log(orderId);
+
+    if (!orderId) {
+      console.error(
+        "Cannot start payment: the selected order has no ID."
+      );
+      return;
+    }
+
+    if (
+      order.prescriptionStatus !== "approved" &&
+      order.prescriptionStatus !== "not_required"
+    ) {
+      return;
+    }
+
+    try {
+      const response = await api.post(
+        "/payment/create-payment",
+        { orderId }
+      );
+
+      console.log(response);
+    } catch (error) {
+      console.error(
+        "Failed to start payment for order:",
+        orderId,
+        error
+      );
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#F7FAFC] text-[#0B3154]">
@@ -220,8 +326,13 @@ function Orders() {
       <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
         <div className="mb-5 flex items-center gap-2 text-sm">
           <span className="text-[#718096]">Home</span>
-          <ChevronRight size={15} className="text-[#A0AEC0]" />
-          <span className="font-semibold text-[#08A875]">My Orders</span>
+          <ChevronRight
+            size={15}
+            className="text-[#A0AEC0]"
+          />
+          <span className="font-semibold text-[#08A875]">
+            My Orders
+          </span>
         </div>
 
         <section className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -230,21 +341,29 @@ function Orders() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#DDF7F0] text-[#08A875]">
                 <Package size={25} />
               </div>
+
               <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
                 My Orders
               </h1>
             </div>
+
             <p className="text-sm text-[#718096] sm:text-base">
               Track your orders and manage your medicine purchases.
             </p>
           </div>
 
           <div className="flex w-full items-center gap-2 rounded-xl border border-[#E5EDF3] bg-white px-4 py-3 shadow-sm lg:max-w-sm">
-            <Search size={19} className="shrink-0 text-[#718096]" />
+            <Search
+              size={19}
+              className="shrink-0 text-[#718096]"
+            />
+
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
               placeholder="Search by order ID or medicine..."
               className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-[#A0AEC0]"
             />
@@ -257,12 +376,20 @@ function Orders() {
               key={label}
               className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#E5EDF3] bg-white p-4 shadow-sm sm:p-5"
             >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}
+              >
                 <Icon size={20} />
               </div>
+
               <div className="min-w-0">
-                <p className="text-xs text-[#718096] sm:text-sm">{label}</p>
-                <p className="mt-1 text-xl font-extrabold">{value}</p>
+                <p className="text-xs text-[#718096] sm:text-sm">
+                  {label}
+                </p>
+
+                <p className="mt-1 text-xl font-extrabold">
+                  {value}
+                </p>
               </div>
             </div>
           ))}
@@ -274,7 +401,9 @@ function Orders() {
               const count =
                 filter === "All Orders"
                   ? orders.length
-                  : orders.filter((order) => order.status === filter).length;
+                  : orders.filter(
+                      (order) => order.status === filter
+                    ).length;
 
               return (
                 <button
@@ -288,6 +417,7 @@ function Orders() {
                   }`}
                 >
                   {filter}
+
                   <span className="rounded-md bg-white/80 px-1.5 py-0.5 text-xs">
                     {count}
                   </span>
@@ -304,13 +434,25 @@ function Orders() {
             </div>
           ) : errorMessage ? (
             <div className="rounded-2xl border border-red-100 bg-white px-5 py-12 text-center">
-              <XCircle size={28} className="mx-auto mb-3 text-red-500" />
-              <h2 className="font-bold">Unable to load orders</h2>
-              <p className="mt-2 text-sm text-[#718096]">{errorMessage}</p>
+              <XCircle
+                size={28}
+                className="mx-auto mb-3 text-red-500"
+              />
+
+              <h2 className="font-bold">
+                Unable to load orders
+              </h2>
+
+              <p className="mt-2 text-sm text-[#718096]">
+                {errorMessage}
+              </p>
             </div>
-          ) : filteredOrders.length > 0 ? (
-            filteredOrders.map((order) => {
-              const status = statusStyles[order.status] || statusStyles.Processing;
+          ) : filterOrders().length > 0 ? (
+            filterOrders().map((order) => {
+              const status =
+                statusStyles[order.status] ||
+                statusStyles.Processing;
+
               const StatusIcon = status.icon;
 
               return (
@@ -323,10 +465,12 @@ function Orders() {
                       <p className="break-all text-sm font-extrabold sm:text-base">
                         Order #{order.id}
                       </p>
+
                       <p className="mt-1 flex items-center gap-1.5 text-xs text-[#718096] sm:text-sm">
                         <CalendarDays size={14} />
                         Placed on {order.date}
                       </p>
+
                       {order.pharmacyName && (
                         <p className="mt-1 text-xs text-[#718096]">
                           Pharmacy: {order.pharmacyName}
@@ -336,17 +480,26 @@ function Orders() {
 
                     <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-start lg:gap-8">
                       <div>
-                        <p className="font-extrabold">{formatPrice(order.total)}</p>
+                        <p className="font-extrabold">
+                          {formatPrice(order.total)}
+                        </p>
+
                         <p className="mt-1 text-xs text-[#718096]">
-                          {order.items.length} {order.items.length === 1 ? "item" : "items"}
+                          {order.items.length}{" "}
+                          {order.items.length === 1
+                            ? "item"
+                            : "items"}
                         </p>
                       </div>
 
                       <div className="min-w-0">
-                        <span className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold sm:text-sm ${status.badge}`}>
+                        <span
+                          className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold sm:text-sm ${status.badge}`}
+                        >
                           <StatusIcon size={16} />
                           {order.status}
                         </span>
+
                         <p className="mt-1 text-xs text-[#718096]">
                           {order.status === "Delivered"
                             ? `Delivered on ${order.deliveryDate || "—"}`
@@ -358,29 +511,59 @@ function Orders() {
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrder(order)}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-[#D6E2EC] px-4 py-2.5 text-sm font-semibold hover:border-[#08A875] hover:text-[#08A875]"
-                      >
-                        View Details <ChevronRight size={17} />
-                      </button>
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                        <button
+                          type="button"
+                          className="inline-flex w-full items-center justify-center rounded-xl bg-[#08A875] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#078F65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08A875] focus-visible:ring-offset-2 sm:w-auto"
+                          onClick={() =>
+                            proceedToPayment(order)
+                          }
+                        >
+                          Pay Now
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedOrder(order)
+                          }
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#D6E2EC] px-4 py-2.5 text-sm font-semibold hover:border-[#08A875] hover:text-[#08A875] sm:w-auto"
+                        >
+                          View Details
+                          <ChevronRight size={17} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
                     {order.items.map((item) => (
-                      <div key={item.id} className="flex min-w-0 items-center gap-3">
+                      <div
+                        key={item.id}
+                        className="flex min-w-0 items-center gap-3"
+                      >
                         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[#F3F8FA] text-[#08A875]">
                           <Package size={28} />
                         </div>
+
                         <div className="min-w-0">
-                          <p className="break-words text-sm font-bold">{item.name}</p>
+                          <p className="break-words text-sm font-bold">
+                            {item.name}
+                          </p>
+
                           {item.pack && (
-                            <p className="mt-1 text-xs text-[#718096]">{item.pack}</p>
+                            <p className="mt-1 text-xs text-[#718096]">
+                              {item.pack}
+                            </p>
                           )}
-                          <p className="mt-0.5 text-xs text-[#718096]">Qty: {item.quantity}</p>
-                          <p className="mt-1 text-sm font-bold">{formatPrice(item.price)}</p>
+
+                          <p className="mt-0.5 text-xs text-[#718096]">
+                            Qty: {item.quantity}
+                          </p>
+
+                          <p className="mt-1 text-sm font-bold">
+                            {formatPrice(item.price)}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -393,12 +576,17 @@ function Orders() {
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#DDF7F0] text-[#08A875]">
                 <ReceiptText size={27} />
               </div>
-              <h2 className="text-lg font-bold">No orders found</h2>
+
+              <h2 className="text-lg font-bold">
+                No orders found
+              </h2>
+
               <p className="mx-auto mt-2 max-w-sm text-sm text-[#718096]">
                 {orders.length === 0
                   ? "Your orders will appear here after you place an order."
                   : "No orders match your current search or selected filter."}
               </p>
+
               {(search || activeFilter !== "All Orders") && (
                 <button
                   type="button"
@@ -432,11 +620,18 @@ function Orders() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="order-details-title" className="text-xl font-extrabold">
+                <h2
+                  id="order-details-title"
+                  className="text-xl font-extrabold"
+                >
                   Order Details
                 </h2>
-                <p className="mt-1 break-all text-sm text-[#718096]">#{selectedOrder.id}</p>
+
+                <p className="mt-1 break-all text-sm text-[#718096]">
+                  #{selectedOrder.id}
+                </p>
               </div>
+
               <button
                 type="button"
                 aria-label="Close order details"
@@ -448,19 +643,30 @@ function Orders() {
             </div>
 
             <div className="mt-5 rounded-xl bg-[#F3FAF7] p-4">
-              <p className="text-sm text-[#718096]">Order status</p>
-              <p className="mt-1 font-bold">{selectedOrder.status}</p>
-              <p className="mt-2 text-sm text-[#718096]">Order date: {selectedOrder.date}</p>
+              <p className="text-sm text-[#718096]">
+                Order status
+              </p>
+
+              <p className="mt-1 font-bold">
+                {selectedOrder.status}
+              </p>
+
+              <p className="mt-2 text-sm text-[#718096]">
+                Order date: {selectedOrder.date}
+              </p>
+
               {selectedOrder.deliveryDate && (
                 <p className="mt-1 text-sm text-[#718096]">
                   Delivery date: {selectedOrder.deliveryDate}
                 </p>
               )}
+
               {selectedOrder.deliveryAddress && (
                 <p className="mt-2 text-sm text-[#718096]">
                   Delivery address: {selectedOrder.deliveryAddress}
                 </p>
               )}
+
               {selectedOrder.prescriptionStatus && (
                 <p className="mt-2 text-sm text-[#718096]">
                   Prescription: {selectedOrder.prescriptionStatus}
@@ -468,24 +674,42 @@ function Orders() {
               )}
             </div>
 
-            <h3 className="mt-6 font-bold">Items ordered</h3>
+            <h3 className="mt-6 font-bold">
+              Items ordered
+            </h3>
+
             <div className="mt-3 divide-y divide-[#E5EDF3]">
               {selectedOrder.items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-4 py-3">
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-4 py-3"
+                >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold">{item.name}</p>
+                    <p className="text-sm font-semibold">
+                      {item.name}
+                    </p>
+
                     <p className="mt-1 text-xs text-[#718096]">
-                      {item.pack ? `${item.pack} · ` : ""}Qty {item.quantity}
+                      {item.pack ? `${item.pack} · ` : ""}
+                      Qty {item.quantity}
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-bold">{formatPrice(item.totalPrice)}</p>
+
+                  <p className="shrink-0 text-sm font-bold">
+                    {formatPrice(item.totalPrice)}
+                  </p>
                 </div>
               ))}
             </div>
 
             <div className="mt-4 flex items-center justify-between border-t border-[#E5EDF3] pt-4">
-              <span className="font-semibold">Order total</span>
-              <span className="text-xl font-extrabold">{formatPrice(selectedOrder.total)}</span>
+              <span className="font-semibold">
+                Order total
+              </span>
+
+              <span className="text-xl font-extrabold">
+                {formatPrice(selectedOrder.total)}
+              </span>
             </div>
 
             <button

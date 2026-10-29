@@ -44,9 +44,9 @@ const Signup = () => {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-[#F4FBFC] via-white to-[#ECF9F6]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-[#F4FBFC] via-white to-[#ECF9F6]">
 
-      <div className="grid h-screen w-full lg:grid-cols-[45%_55%]">
+      <div className="grid min-h-screen w-full lg:grid-cols-[45%_55%]">
 
         {/* 
             LEFT SIDE
@@ -210,7 +210,7 @@ const Signup = () => {
         {/* =====================================================
             RIGHT SIDE
         ====================================================== */}
-        <div className="h-screen min-h-0 w-full overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-5">
+        <div className="min-h-screen min-w-0 w-full overflow-x-hidden p-3 sm:p-4 lg:p-5">
 
           {/* WHITE CARD */}
           <div
@@ -415,7 +415,7 @@ const Signup = () => {
                     <input
                       type="text"
                       placeholder="Enter your full name"
-                      className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      className="ml-3 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
                       onChange={(e)=>{setFormData({...formData,name:e.target.value})}}
                     />
 
@@ -441,7 +441,7 @@ const Signup = () => {
                     <input
                       type="text"
                       placeholder="Enter your email or phone number"
-                      className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      className="ml-3 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
                       onChange={(e)=>{setFormData({...formData,email:e.target.value})}}
                     />
 
@@ -467,7 +467,7 @@ const Signup = () => {
                     <input
                       type="password"
                       placeholder="Create a password"
-                      className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      className="ml-3 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
                       onChange={(e)=>{setFormData({...formData,password:e.target.value})}}
                     />
 
@@ -495,7 +495,7 @@ const Signup = () => {
                     <input
                       type="password"
                       placeholder="Confirm your password"
-                      className="ml-3 w-full bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
+                      className="ml-3 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#8191A8]"
                       onChange={(e)=>{setFormData({...formData,confirmPassword:e.target.value})}}
                     />
 
