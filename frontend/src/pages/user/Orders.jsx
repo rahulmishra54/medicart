@@ -11,7 +11,7 @@ import {
   CalendarDays,
   ReceiptText,
 } from "lucide-react";
-
+import {useNavigate} from "react-router-dom";
 import Navbar from "../../component/user/Navbar.jsx";
 import Footer from "../../component/user/Footer.jsx";
 import api from "../../api/api.js";
@@ -169,7 +169,7 @@ function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -284,40 +284,103 @@ function Orders() {
     },
   ];
 
-  async function proceedToPayment(order) {
+
+
+async function proceedToPayment(order) {
     const orderId = String(order?.id ?? "");
 
-    console.log(orderId);
-
     if (!orderId) {
-      console.error(
-        "Cannot start payment: the selected order has no ID."
-      );
-      return;
+        console.error("Order ID missing");
+        return;
     }
 
     if (
-      order.prescriptionStatus !== "approved" &&
-      order.prescriptionStatus !== "not_required"
+        order.prescriptionStatus !== "approved" &&
+        order.prescriptionStatus !== "not_required"
     ) {
-      return;
+        console.error("Prescription is not approved");
+        return;
     }
 
     try {
-      const response = await api.post(
-        "/payment/create-payment",
-        { orderId }
-      );
+        // 1. Create Razorpay order from backend
+        const response = await api.post(
+            "/payment/create-payment",
+            { orderId }
+        );
 
-      console.log(response);
+        console.log("Backend response:", response.data);
+
+        // 2. Extract Razorpay order
+        const razorpayOrder =
+            response.data.order ||
+            response.data.razorpayOrder ||
+            response.data;
+
+        // 3. Validate Razorpay order
+        if (
+            !razorpayOrder?.id ||
+            !razorpayOrder?.amount ||
+            !razorpayOrder?.currency
+        ) {
+            throw new Error("Invalid Razorpay order response");
+        }
+
+        // 4. Check Razorpay Key
+        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+        if (!razorpayKey) {
+            throw new Error("Razorpay Key ID is missing");
+        }
+
+        // 5. Configure Razorpay Checkout
+        const options = {
+            key: razorpayKey,
+            amount: razorpayOrder.amount,
+            currency: razorpayOrder.currency,
+            name: "MediCart",
+            description: "Medicine Order Payment",
+            order_id: razorpayOrder.id,
+
+            handler: async function (paymentResponse) {
+                console.log("Payment successful:", paymentResponse);
+                const response = await api.post("/payment/verify-payment", {
+                    orderId: orderId,
+                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                    razorpay_signature: paymentResponse.razorpay_signature,
+                });
+                console.log(response.data);
+                // Payment verification will be implemented next
+            },
+
+            modal: {
+                ondismiss: function () {
+                    console.log("Payment window closed");
+                }
+            },
+
+            theme: {
+                color: "#08A875"
+            }
+        };
+
+        // 6. Open Razorpay Checkout
+        const razorpay = new window.Razorpay(options);
+
+        razorpay.on("payment.failed", function (error) {
+            console.error("Payment failed:", error);
+        });
+
+        razorpay.open();
+
     } catch (error) {
-      console.error(
-        "Failed to start payment for order:",
-        orderId,
-        error
-      );
+        console.error(
+            "Payment error:",
+            error.response?.data || error.message
+        );
     }
-  }
+}
 
   return (
     <div className="min-h-screen bg-[#F7FAFC] text-[#0B3154]">

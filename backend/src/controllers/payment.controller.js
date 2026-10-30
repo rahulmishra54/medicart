@@ -95,7 +95,10 @@ async function verifyPayment(req, res) {
       razorpay_payment_id,
       razorpay_signature,
     } = req.body;
-
+console.log(orderId,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,)
     if (
       !mongoose.isValidObjectId(orderId) ||
       typeof razorpay_order_id !== "string" ||
@@ -170,6 +173,7 @@ async function verifyPayment(req, res) {
     return res.status(200).json({
       success: true,
       message: "Payment verified successfully",
+      data:order
     });
   } catch (error) {
     console.error("Verify payment error:", error);

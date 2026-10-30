@@ -63,10 +63,12 @@ function AppRoutes() {
         path="/pharmacist"
         element={<RequirePharmacist><PharmacistDashboard /></RequirePharmacist>}
       />
+
       <Route
   path="/pharmacist/registration-submitted"
   element={<PharmacistRegistrationSubmitted />}
 />
+
       <Route path="/admin/Category" element={<RequireAdmin><Category /></RequireAdmin>} />
       <Route path="/admin/pharmacies" element={<RequireAdmin><PharmacyManagement /></RequireAdmin>} />
       <Route path="/admin/medicines" element={<RequireAdmin><MedicineManagement /></RequireAdmin>} />
