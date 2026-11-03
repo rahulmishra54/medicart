@@ -115,7 +115,7 @@ const Orders = () => {
                         statusStyle[order.status?.[0]?.toUpperCase() + order.status?.slice(1)] || ""
                       }`}
                     >
-                      {order.status}
+                      {order.paymentStatus}
                     </span>
                   </td>
                   <td className="px-5 py-4">

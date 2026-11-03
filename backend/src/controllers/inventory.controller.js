@@ -165,6 +165,7 @@ const getExpiringMedicines = async (req, res) => {
 const getInventoryStats = async (req, res) => {
   try {
     const pharmacyId = req.user._id;
+    console.log(pharmacyId)
 
     const totalMedicines = await Medicine.countDocuments({
       pharmacy: pharmacyId,

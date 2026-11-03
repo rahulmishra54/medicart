@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+
+import { useEffect, useState } from "react";
 import {
   Search,
   Package,
@@ -11,7 +12,7 @@ import {
   CalendarDays,
   ReceiptText,
 } from "lucide-react";
-import {useNavigate} from "react-router-dom";
+
 import Navbar from "../../component/user/Navbar.jsx";
 import Footer from "../../component/user/Footer.jsx";
 import api from "../../api/api.js";
@@ -41,29 +42,6 @@ const statusStyles = {
     icon: XCircle,
     badge: "bg-red-50 text-red-600",
   },
-  Pending: {
-    icon: Clock3,
-    badge: "bg-amber-50 text-amber-700",
-  },
-};
-
-const formatPrice = (price) =>
-  `₹${Number(price || 0).toLocaleString("en-IN", {
-    maximumFractionDigits: 2,
-  })}`;
-
-const formatDate = (date) => {
-  if (!date) return "—";
-
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) return "—";
-
-  return parsedDate.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 };
 
 const normalizeStatus = (status) => {
@@ -79,87 +57,7 @@ const normalizeStatus = (status) => {
     return "Cancelled";
   }
 
-  if (
-    value === "pending" ||
-    value === "processing" ||
-    value === "confirmed"
-  ) {
-    return "Processing";
-  }
-
   return "Processing";
-};
-
-const normalizeOrder = (order) => {
-  const rawItems = order.orderItems || order.items || [];
-
-  const items = rawItems.map((item, index) => {
-    const medicine =
-      item.medicine && typeof item.medicine === "object"
-        ? item.medicine
-        : {};
-
-    return {
-      id:
-        item._id ||
-        item.id ||
-        `${order._id || order.id}-item-${index}`,
-
-      name: medicine.name || item.name || "Medicine",
-
-      pack:
-        medicine.packSize ||
-        medicine.pack ||
-        item.pack ||
-        "",
-
-      quantity: Number(item.quantity || 1),
-
-      price: Number(
-        item.unitPrice ??
-          item.price ??
-          medicine.price ??
-          0
-      ),
-
-      totalPrice: Number(
-        item.totalPrice ??
-          Number(
-            item.unitPrice ??
-              item.price ??
-              medicine.price ??
-              0
-          ) * Number(item.quantity || 1)
-      ),
-    };
-  });
-
-  const totalAmount = Number(
-    order.totalAmount ??
-      order.total ??
-      items.reduce((sum, item) => sum + item.totalPrice, 0)
-  );
-
-  return {
-    id: String(order._id ?? order.id ?? ""),
-    date: formatDate(
-      order.createdAt || order.date || order.orderDate
-    ),
-    total: totalAmount,
-    status: normalizeStatus(order.status),
-    deliveryDate: order.deliveryDate
-      ? formatDate(order.deliveryDate)
-      : null,
-    items,
-
-    pharmacyName:
-      order.pharmacy && typeof order.pharmacy === "object"
-        ? order.pharmacy.name
-        : null,
-
-    deliveryAddress: order.deliveryAddress || "",
-    prescriptionStatus: order.prescriptionStatus || null,
-  };
 };
 
 function Orders() {
@@ -169,7 +67,7 @@ function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -177,15 +75,8 @@ function Orders() {
         setErrorMessage("");
 
         const response = await api.get("/orders/");
-        const data = response.data.orders;
 
-        const receivedOrders = Array.isArray(data)
-          ? data
-          : data
-            ? [data]
-            : [];
-
-        setOrders(receivedOrders.map(normalizeOrder));
+        setOrders(response.data.orders || []);
       } catch (error) {
         console.error("Failed to fetch orders:", error);
 
@@ -201,56 +92,25 @@ function Orders() {
     fetchOrders();
   }, []);
 
-  // Filter orders by status, order ID, pharmacy, or medicine name
-  const filterOrders = () => {
+  // Filter orders
+  const filteredOrders = orders.filter((order) => {
+    const matchesFilter =
+      activeFilter === "All Orders" ||
+      normalizeStatus(order.status) === activeFilter;
+
     const searchText = search.toLowerCase().trim();
-    const filteredOrders = [];
 
-    for (const order of orders) {
-      if (
-        activeFilter !== "All Orders" &&
-        order.status !== activeFilter
-      ) {
-        continue;
-      }
+    const matchesSearch =
+      String(order._id || "").toLowerCase().includes(searchText) ||
+      (order.pharmacy?.name || "").toLowerCase().includes(searchText) ||
+      order.orderItems?.some((item) =>
+        (item.medicine?.name || "").toLowerCase().includes(searchText)
+      );
 
-      let matchesSearch = false;
+    return matchesFilter && matchesSearch;
+  });
 
-      if (
-        String(order.id)
-          .toLowerCase()
-          .includes(searchText)
-      ) {
-        matchesSearch = true;
-      }
-
-      if (
-        (order.pharmacyName || "")
-          .toLowerCase()
-          .includes(searchText)
-      ) {
-        matchesSearch = true;
-      }
-
-      for (const item of order.items) {
-        if (
-          item.name
-            .toLowerCase()
-            .includes(searchText)
-        ) {
-          matchesSearch = true;
-          break;
-        }
-      }
-
-      if (matchesSearch) {
-        filteredOrders.push(order);
-      }
-    }
-
-    return filteredOrders;
-  };
-
+  // Order summary
   const summary = [
     {
       label: "Total Orders",
@@ -261,7 +121,7 @@ function Orders() {
     {
       label: "Processing",
       value: orders.filter(
-        (order) => order.status === "Processing"
+        (order) => normalizeStatus(order.status) === "Processing"
       ).length,
       Icon: Clock3,
       color: "bg-amber-50 text-amber-600",
@@ -269,7 +129,7 @@ function Orders() {
     {
       label: "Shipped",
       value: orders.filter(
-        (order) => order.status === "Shipped"
+        (order) => normalizeStatus(order.status) === "Shipped"
       ).length,
       Icon: Truck,
       color: "bg-blue-50 text-blue-600",
@@ -277,127 +137,131 @@ function Orders() {
     {
       label: "Delivered",
       value: orders.filter(
-        (order) => order.status === "Delivered"
+        (order) => normalizeStatus(order.status) === "Delivered"
       ).length,
       Icon: CheckCircle2,
       color: "bg-emerald-50 text-emerald-600",
     },
   ];
 
-
-
-async function proceedToPayment(order) {
-    const orderId = String(order?.id ?? "");
+  // Razorpay payment
+  async function proceedToPayment(order) {
+    const orderId = String(order?._id || "");
 
     if (!orderId) {
-        console.error("Order ID missing");
-        return;
+      console.error("Order ID missing");
+      return;
     }
 
     if (
-        order.prescriptionStatus !== "approved" &&
-        order.prescriptionStatus !== "not_required"
+      order.prescriptionStatus !== "approved" &&
+      order.prescriptionStatus !== "not_required"
     ) {
-        console.error("Prescription is not approved");
-        return;
+      console.error("Prescription is not approved");
+      return;
     }
 
     try {
-        // 1. Create Razorpay order from backend
-        const response = await api.post(
-            "/payment/create-payment",
-            { orderId }
-        );
+      // Create Razorpay order
+      const response = await api.post(
+        "/payment/create-payment",
+        { orderId }
+      );
 
-        console.log("Backend response:", response.data);
+      const razorpayOrder =
+        response.data.order ||
+        response.data.razorpayOrder ||
+        response.data;
 
-        // 2. Extract Razorpay order
-        const razorpayOrder =
-            response.data.order ||
-            response.data.razorpayOrder ||
-            response.data;
+      if (
+        !razorpayOrder?.id ||
+        !razorpayOrder?.amount ||
+        !razorpayOrder?.currency
+      ) {
+        throw new Error("Invalid Razorpay order response");
+      }
 
-        // 3. Validate Razorpay order
-        if (
-            !razorpayOrder?.id ||
-            !razorpayOrder?.amount ||
-            !razorpayOrder?.currency
-        ) {
-            throw new Error("Invalid Razorpay order response");
-        }
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
-        // 4. Check Razorpay Key
-        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!razorpayKey) {
+        throw new Error("Razorpay Key ID is missing");
+      }
 
-        if (!razorpayKey) {
-            throw new Error("Razorpay Key ID is missing");
-        }
+      // Razorpay checkout options
+      const options = {
+        key: razorpayKey,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: "MediCart",
+        description: "Medicine Order Payment",
+        order_id: razorpayOrder.id,
 
-        // 5. Configure Razorpay Checkout
-        const options = {
-            key: razorpayKey,
-            amount: razorpayOrder.amount,
-            currency: razorpayOrder.currency,
-            name: "MediCart",
-            description: "Medicine Order Payment",
-            order_id: razorpayOrder.id,
+        handler: async function (paymentResponse) {
+          try {
+            const verifyResponse = await api.post(
+              "/payment/verify-payment",
+              {
+                orderId,
+                razorpay_payment_id:
+                  paymentResponse.razorpay_payment_id,
+                razorpay_order_id:
+                  paymentResponse.razorpay_order_id,
+                razorpay_signature:
+                  paymentResponse.razorpay_signature,
+              }
+            );
 
-            handler: async function (paymentResponse) {
-                console.log("Payment successful:", paymentResponse);
-                const response = await api.post("/payment/verify-payment", {
-                    orderId: orderId,
-                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
-                    razorpay_order_id: paymentResponse.razorpay_order_id,
-                    razorpay_signature: paymentResponse.razorpay_signature,
-                });
-                console.log(response.data);
-                // Payment verification will be implemented next
-            },
+            console.log("Payment verified:", verifyResponse.data);
+          } catch (error) {
+            console.error(
+              "Payment verification error:",
+              error.response?.data || error.message
+            );
+          }
+        },
 
-            modal: {
-                ondismiss: function () {
-                    console.log("Payment window closed");
-                }
-            },
+        modal: {
+          ondismiss: function () {
+            console.log("Payment window closed");
+          },
+        },
 
-            theme: {
-                color: "#08A875"
-            }
-        };
+        theme: {
+          color: "#08A875",
+        },
+      };
 
-        // 6. Open Razorpay Checkout
-        const razorpay = new window.Razorpay(options);
+      const razorpay = new window.Razorpay(options);
 
-        razorpay.on("payment.failed", function (error) {
-            console.error("Payment failed:", error);
-        });
+      razorpay.on("payment.failed", function (error) {
+        console.error("Payment failed:", error);
+      });
 
-        razorpay.open();
-
+      razorpay.open();
     } catch (error) {
-        console.error(
-            "Payment error:",
-            error.response?.data || error.message
-        );
+      console.error(
+        "Payment error:",
+        error.response?.data || error.message
+      );
     }
-}
+  }
 
   return (
     <div className="min-h-screen bg-[#F7FAFC] text-[#0B3154]">
       <Navbar />
 
       <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
+
+        {/* Breadcrumb */}
         <div className="mb-5 flex items-center gap-2 text-sm">
           <span className="text-[#718096]">Home</span>
-          <ChevronRight
-            size={15}
-            className="text-[#A0AEC0]"
-          />
+          <ChevronRight size={15} className="text-[#A0AEC0]" />
           <span className="font-semibold text-[#08A875]">
             My Orders
           </span>
         </div>
 
+        {/* Heading and Search */}
         <section className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-3">
@@ -416,32 +280,26 @@ async function proceedToPayment(order) {
           </div>
 
           <div className="flex w-full items-center gap-2 rounded-xl border border-[#E5EDF3] bg-white px-4 py-3 shadow-sm lg:max-w-sm">
-            <Search
-              size={19}
-              className="shrink-0 text-[#718096]"
-            />
+            <Search size={19} className="shrink-0 text-[#718096]" />
 
             <input
               type="search"
               value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
+              onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by order ID or medicine..."
               className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-[#A0AEC0]"
             />
           </div>
         </section>
 
+        {/* Summary Cards */}
         <section className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
           {summary.map(({ label, value, Icon, color }) => (
             <div
               key={label}
               className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#E5EDF3] bg-white p-4 shadow-sm sm:p-5"
             >
-              <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}
-              >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>
                 <Icon size={20} />
               </div>
 
@@ -449,7 +307,6 @@ async function proceedToPayment(order) {
                 <p className="text-xs text-[#718096] sm:text-sm">
                   {label}
                 </p>
-
                 <p className="mt-1 text-xl font-extrabold">
                   {value}
                 </p>
@@ -458,6 +315,7 @@ async function proceedToPayment(order) {
           ))}
         </section>
 
+        {/* Filters */}
         <section className="mb-5">
           <div className="flex gap-2 overflow-x-auto pb-2">
             {filters.map((filter) => {
@@ -465,7 +323,8 @@ async function proceedToPayment(order) {
                 filter === "All Orders"
                   ? orders.length
                   : orders.filter(
-                      (order) => order.status === filter
+                      (order) =>
+                        normalizeStatus(order.status) === filter
                     ).length;
 
               return (
@@ -490,6 +349,7 @@ async function proceedToPayment(order) {
           </div>
         </section>
 
+        {/* Orders */}
         <section className="space-y-4">
           {loading ? (
             <div className="rounded-2xl border border-[#E5EDF3] bg-white px-5 py-16 text-center text-sm text-[#718096]">
@@ -497,10 +357,7 @@ async function proceedToPayment(order) {
             </div>
           ) : errorMessage ? (
             <div className="rounded-2xl border border-red-100 bg-white px-5 py-12 text-center">
-              <XCircle
-                size={28}
-                className="mx-auto mb-3 text-red-500"
-              />
+              <XCircle size={28} className="mx-auto mb-3 text-red-500" />
 
               <h2 className="font-bold">
                 Unable to load orders
@@ -510,33 +367,35 @@ async function proceedToPayment(order) {
                 {errorMessage}
               </p>
             </div>
-          ) : filterOrders().length > 0 ? (
-            filterOrders().map((order) => {
+          ) : filteredOrders.length > 0 ? (
+            filteredOrders.map((order) => {
               const status =
-                statusStyles[order.status] ||
+                statusStyles[normalizeStatus(order.status)] ||
                 statusStyles.Processing;
 
               const StatusIcon = status.icon;
 
               return (
                 <article
-                  key={order.id}
+                  key={order._id}
                   className="overflow-hidden rounded-2xl border border-[#E5EDF3] bg-white shadow-sm transition hover:shadow-md"
                 >
+                  {/* Order Header */}
                   <div className="flex flex-col gap-4 border-b border-[#EDF2F7] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0">
                       <p className="break-all text-sm font-extrabold sm:text-base">
-                        Order #{order.id}
+                        Order #{order._id}
                       </p>
 
                       <p className="mt-1 flex items-center gap-1.5 text-xs text-[#718096] sm:text-sm">
                         <CalendarDays size={14} />
-                        Placed on {order.date}
+                        Placed on{" "}
+                        {new Date(order.createdAt).toLocaleDateString("en-IN")}
                       </p>
 
-                      {order.pharmacyName && (
+                      {order.pharmacy?.name && (
                         <p className="mt-1 text-xs text-[#718096]">
-                          Pharmacy: {order.pharmacyName}
+                          Pharmacy: {order.pharmacy.name}
                         </p>
                       )}
                     </div>
@@ -544,52 +403,46 @@ async function proceedToPayment(order) {
                     <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-start lg:gap-8">
                       <div>
                         <p className="font-extrabold">
-                          {formatPrice(order.total)}
+                          ₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}
                         </p>
 
                         <p className="mt-1 text-xs text-[#718096]">
-                          {order.items.length}{" "}
-                          {order.items.length === 1
-                            ? "item"
-                            : "items"}
+                          {order.orderItems?.length || 0} items
                         </p>
                       </div>
 
                       <div className="min-w-0">
-                        <span
-                          className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold sm:text-sm ${status.badge}`}
-                        >
+                        <span className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold sm:text-sm ${status.badge}`}>
                           <StatusIcon size={16} />
-                          {order.status}
+                          {normalizeStatus(order.status)}
                         </span>
 
                         <p className="mt-1 text-xs text-[#718096]">
-                          {order.status === "Delivered"
-                            ? `Delivered on ${order.deliveryDate || "—"}`
-                            : order.status === "Shipped"
-                              ? `Expected delivery: ${order.deliveryDate || "—"}`
-                              : order.status === "Processing"
+                          {normalizeStatus(order.status) === "Delivered"
+                            ? `Delivered on ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString("en-IN") : "—"}`
+                            : normalizeStatus(order.status) === "Shipped"
+                              ? `Expected delivery: ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString("en-IN") : "—"}`
+                              : normalizeStatus(order.status) === "Processing"
                                 ? "Your order is being prepared"
                                 : "This order was cancelled"}
                         </p>
                       </div>
 
                       <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                        <button
-                          type="button"
-                          className="inline-flex w-full items-center justify-center rounded-xl bg-[#08A875] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#078F65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08A875] focus-visible:ring-offset-2 sm:w-auto"
-                          onClick={() =>
-                            proceedToPayment(order)
-                          }
-                        >
-                          Pay Now
-                        </button>
+                        {order.paymentStatus !== "paid" &&
+                          normalizeStatus(order.status) !== "Cancelled" && (
+                            <button
+                              type="button"
+                              onClick={() => proceedToPayment(order)}
+                              className="inline-flex w-full items-center justify-center rounded-xl bg-[#08A875] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#078F65] sm:w-auto"
+                            >
+                              Pay Now
+                            </button>
+                          )}
 
                         <button
                           type="button"
-                          onClick={() =>
-                            setSelectedOrder(order)
-                          }
+                          onClick={() => setSelectedOrder(order)}
                           className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#D6E2EC] px-4 py-2.5 text-sm font-semibold hover:border-[#08A875] hover:text-[#08A875] sm:w-auto"
                         >
                           View Details
@@ -599,10 +452,11 @@ async function proceedToPayment(order) {
                     </div>
                   </div>
 
+                  {/* Order Items */}
                   <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
-                    {order.items.map((item) => (
+                    {order.orderItems?.map((item, index) => (
                       <div
-                        key={item.id}
+                        key={item._id || index}
                         className="flex min-w-0 items-center gap-3"
                       >
                         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[#F3F8FA] text-[#08A875]">
@@ -611,12 +465,12 @@ async function proceedToPayment(order) {
 
                         <div className="min-w-0">
                           <p className="break-words text-sm font-bold">
-                            {item.name}
+                            {item.medicine?.name || "Medicine"}
                           </p>
 
-                          {item.pack && (
+                          {item.medicine?.packSize && (
                             <p className="mt-1 text-xs text-[#718096]">
-                              {item.pack}
+                              {item.medicine.packSize}
                             </p>
                           )}
 
@@ -625,7 +479,7 @@ async function proceedToPayment(order) {
                           </p>
 
                           <p className="mt-1 text-sm font-bold">
-                            {formatPrice(item.price)}
+                            ₹{Number(item.unitPrice || 0).toLocaleString("en-IN")}
                           </p>
                         </div>
                       </div>
@@ -669,6 +523,7 @@ async function proceedToPayment(order) {
 
       <Footer />
 
+      {/* Order Details Modal */}
       {selectedOrder && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B3154]/50 p-4"
@@ -691,7 +546,7 @@ async function proceedToPayment(order) {
                 </h2>
 
                 <p className="mt-1 break-all text-sm text-[#718096]">
-                  #{selectedOrder.id}
+                  #{selectedOrder._id}
                 </p>
               </div>
 
@@ -711,16 +566,18 @@ async function proceedToPayment(order) {
               </p>
 
               <p className="mt-1 font-bold">
-                {selectedOrder.status}
+                {normalizeStatus(selectedOrder.status)}
               </p>
 
               <p className="mt-2 text-sm text-[#718096]">
-                Order date: {selectedOrder.date}
+                Order date:{" "}
+                {new Date(selectedOrder.createdAt).toLocaleDateString("en-IN")}
               </p>
 
               {selectedOrder.deliveryDate && (
                 <p className="mt-1 text-sm text-[#718096]">
-                  Delivery date: {selectedOrder.deliveryDate}
+                  Delivery date:{" "}
+                  {new Date(selectedOrder.deliveryDate).toLocaleDateString("en-IN")}
                 </p>
               )}
 
@@ -742,24 +599,23 @@ async function proceedToPayment(order) {
             </h3>
 
             <div className="mt-3 divide-y divide-[#E5EDF3]">
-              {selectedOrder.items.map((item) => (
+              {selectedOrder.orderItems?.map((item, index) => (
                 <div
-                  key={item.id}
+                  key={item._id || index}
                   className="flex items-center justify-between gap-4 py-3"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">
-                      {item.name}
+                      {item.medicine?.name || "Medicine"}
                     </p>
 
                     <p className="mt-1 text-xs text-[#718096]">
-                      {item.pack ? `${item.pack} · ` : ""}
                       Qty {item.quantity}
                     </p>
                   </div>
 
                   <p className="shrink-0 text-sm font-bold">
-                    {formatPrice(item.totalPrice)}
+                    ₹{Number(item.totalPrice || 0).toLocaleString("en-IN")}
                   </p>
                 </div>
               ))}
@@ -771,7 +627,7 @@ async function proceedToPayment(order) {
               </span>
 
               <span className="text-xl font-extrabold">
-                {formatPrice(selectedOrder.total)}
+                ₹{Number(selectedOrder.totalAmount || 0).toLocaleString("en-IN")}
               </span>
             </div>
 

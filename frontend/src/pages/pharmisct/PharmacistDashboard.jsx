@@ -22,6 +22,7 @@ const PharmacistDashboard = () => {
           api.get("/inventory/stats"),
           api.get("/orders/"),
         ]);
+        console.log(statsResult,ordersResult);
 
         if (!isMounted) return;
 
